@@ -99,7 +99,7 @@ test('동일 장소, 범위 밖, 알 수 없는 입력에 실제 경로를 만�
 
 test('동일 출발·도착과 미지원 구간을 선택하면 결과 화면에 각각의 오류가 표시된다', () => {
   const document = elementsWithValues({ 'route-result-container': '' });
-  const ctx = loadScripts(['data.js', 'state.js', 'logic.js', 'route-ui.js'], {
+  const ctx = loadScripts(['data.js', 'state.js', 'logic.js', 'html.js', 'route-ui.js'], {
     document, renderTransportComparison() {}, renderBatterySection() {}
   });
   vm.runInContext("state.origin = 'masan_univ'; state.destination = 'masan_univ'", ctx);
@@ -124,7 +124,7 @@ test('배터리 입력을 비우거나 범위를 초과하면 화면에 오류�
     'input-battery-pct': '45', 'input-full-range': '25', 'select-env-factor': '0.8',
     'battery-result-box': ''
   });
-  const ctx = loadScripts(['state.js', 'input.js', 'logic.js', 'battery-ui.js'], { document });
+  const ctx = loadScripts(['state.js', 'input.js', 'logic.js', 'html.js', 'battery-ui.js'], { document });
   ctx.renderBatterySection();
   assert.match(document.getElementById('battery-result-box').innerHTML, /7\.65 km/);
   document.getElementById('input-battery-pct').value = '';
@@ -147,6 +147,62 @@ test('입력 파서는 빈 값과 범위 밖을 구분하고 0%, 100% 경계값�
   assert.equal(ctx.parseBatteryInputs('50', '0', '0.8').rangeValid, false);
   assert.equal(ctx.parseBatteryInputs('50', '100.1', '0.8').rangeValid, false);
   assert.equal(ctx.parseBatteryInputs('50', '25', '').factorValid, false);
+});
+
+test('경로 이름·구간 설명과 SVG 속성의 HTML 문자는 마크업으로 실행되지 않게 출력한다', () => {
+  const document = elementsWithValues({ 'route-result-container': '' });
+  const payload = '<img src=x onerror=alert(1)>';
+  const attributePayload = '90,150" onload="alert(1)';
+  const ctx = loadScripts(['data.js', 'state.js', 'logic.js', 'html.js', 'route-ui.js'], {
+    document, payload, attributePayload, renderTransportComparison() {}, renderBatterySection() {}
+  });
+  ctx.renderRouteResult();
+  assert.match(document.getElementById('route-result-container').innerHTML, /<svg viewBox="0 0 600 265"/);
+  assert.equal(ctx.isValidPolylinePoints('90,150 230,210'), true);
+  assert.equal(ctx.isValidPolylinePoints('90,150'), false);
+  assert.equal(ctx.isValidPolylinePoints('90,150 Infinity,1'), false);
+  vm.runInContext(`
+    const scenario = DEMO_SCENARIOS['masan_univ__naeseo_center'];
+    scenario.zoneTitle = payload;
+    scenario.candidates[0].name = payload;
+    scenario.candidates[0].segments[0].detail = payload;
+    scenario.candidates[0].segments[0].points = attributePayload;
+    scenario.areaBlockedSegments[0].points = attributePayload;
+  `, ctx);
+  ctx.renderRouteResult();
+  const html = document.getElementById('route-result-container').innerHTML;
+  assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'));
+  assert.ok(!html.includes(payload));
+  assert.match(html, /지도 도식 데이터 오류/);
+  assert.ok(!html.includes(attributePayload));
+  assert.equal(ctx.escapeHtml(attributePayload), '90,150&quot; onload=&quot;alert(1)');
+});
+
+test('버스·충전소 데이터는 이스케이프하고 유효하지 않은 전화 링크를 만들지 않는다', () => {
+  const document = elementsWithValues({
+    'select-bus-stop': 'stop_masan_univ', 'bus-arrival-list': '', 'charger-list': ''
+  });
+  const payload = '<img src=x onerror=alert(1)>';
+  const ctx = loadScripts(['data.js', 'state.js', 'input.js', 'html.js', 'transport-ui.js', 'battery-ui.js'], {
+    document, payload
+  });
+  vm.runInContext(`
+    DEMO_BUS_DATA.stop_masan_univ.stopName = payload;
+    DEMO_BUS_DATA.stop_masan_univ.arrivals[0].dest = payload;
+    DEMO_CHARGERS[0].name = payload;
+    DEMO_CHARGERS[0].phone = '055-225-6421" onclick="alert(1)';
+  `, ctx);
+  ctx.renderBusArrivals();
+  ctx.renderChargers();
+  for (const id of ['bus-arrival-list', 'charger-list']) {
+    const html = document.getElementById(id).innerHTML;
+    assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'));
+    assert.ok(!html.includes(payload));
+  }
+  const chargers = document.getElementById('charger-list').innerHTML;
+  assert.match(chargers, /연락처 확인 불가/);
+  assert.ok(!chargers.includes('onclick="alert(1)'));
+  assert.ok(chargers.includes('href="tel:0552561621"'));
 });
 
 test('위치와 연락처를 지정하기 전에는 가짜 좌표나 연락처를 사용하지 않는다', () => {

@@ -29,7 +29,7 @@
         </p>
       </div>
       <div class="text-amber-200 text-xs shrink-0">
-        기준일: 2026-11-26 | 출처: 시범조사 샘플
+        기준일: 2026-11-26 | 시연 샘플
       </div>
     </div>
   </header>
@@ -157,6 +157,13 @@
     <!-- TAB 1: 휠체어·이동약자 맞춤 간편 길찾기 (P1 핵심)                     -->
     <!-- ===================================================================== -->
     <section id="panel-route" role="tabpanel" aria-labelledby="tab-route" tabindex="0" class="space-y-5">
+      <div class="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-sm space-y-1">
+        <h2 class="font-extrabold">지원하는 시연 구간 (양방향)</h2>
+        <p>마산대학교 정문 ↔ 내서읍 행정복지센터</p>
+        <p>마산시외버스터미널 ↔ 합성동 지하상가 인근</p>
+        <p>가상 지점 C-1 ↔ C-2 (실제 장소 아님)</p>
+        <p>위 구간도 현장 검증되지 않은 샘플입니다. 다른 구간은 경로를 제공하지 않습니다.</p>
+      </div>
       <!-- 입력 카드: 이동기기 & 마산 시범 출발지·도착지 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -618,6 +625,15 @@
       <p class="text-amber-300 font-semibold">
         ※ 본 웹 애플리케이션은 해커톤 시연용 시제품으로, 모든 경로·시간·배터리·버스·충전소 정보는 샘플 및 추정치입니다. 실제 이동 안전을 보장하지 않으며, 확인되지 않은 구간은 안전 경로로 간주하지 않습니다.
       </p>
+      <details class="pt-2">
+        <summary class="font-bold cursor-pointer">실행·테스트와 제출 자료 보기</summary>
+        <p>로컬 실행: 저장소에서 <code>python3 -m http.server 8000</code> 실행 후 localhost:8000 접속</p>
+        <p>자동 테스트: <code>node --test tests/*.test.cjs</code> (2026-11-26 로컬 실행: 26개 통과)</p>
+        <p>테스트는 시연 코드만 검증하며 실제 GPS·실시간 정보·현장 안전성을 검증하지 않습니다.</p>
+        <a class="underline" href="https://github.com/seoajeong98/-/blob/main/tests/current-site.test.cjs">현재 사이트 테스트 코드</a>
+        · <a class="underline" href="https://github.com/seoajeong98/-/actions">GitHub Actions 실행 결과</a>
+        · <a class="underline" href="https://github.com/seoajeong98/-/blob/main/README.md">실행 안내</a>
+      </details>
     </div>
   </footer>
 
@@ -635,6 +651,7 @@
   <script defer src="assets/state.js"></script>
   <script defer src="assets/input.js"></script>
   <script defer src="assets/logic.js"></script>
+  <script defer src="assets/html.js"></script>
   <script defer src="assets/route-ui.js"></script>
   <script defer src="assets/transport-ui.js"></script>
   <script defer src="assets/battery-ui.js"></script>

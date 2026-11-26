@@ -39,7 +39,7 @@ function renderBatterySection() {
     routeCompareHtml = `
       <div class="pt-2 border-t border-slate-200/80 space-y-2">
         <div class="text-xs sm:text-sm font-bold text-slate-800">
-          선택 경로 편도 거리: <strong>${oneWayKm.toFixed(2)}km (${route.distanceM}m)</strong>
+          선택 경로 편도 거리: <strong>${oneWayKm.toFixed(2)}km (${escapeHtml(route.distanceM)}m)</strong>
         </div>
         <div class="flex flex-wrap gap-2">
           ${oneWayBadge}
@@ -66,29 +66,32 @@ function renderBatterySection() {
 
 function renderChargers() {
   const listEl = document.getElementById('charger-list');
-  listEl.innerHTML = DEMO_CHARGERS.map((chg) => `
+  listEl.innerHTML = DEMO_CHARGERS.map((chg) => {
+    const phone = typeof chg.phone === 'string' ? normalizeGuardianPhone(chg.phone) : null;
+    return `
     <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3">
       <div class="space-y-1.5">
         <div class="flex items-start justify-between gap-2">
-          <h4 class="font-extrabold text-sm sm:text-base text-slate-900">${chg.name}</h4>
+          <h4 class="font-extrabold text-sm sm:text-base text-slate-900">${escapeHtml(chg.name)}</h4>
           <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-100 text-blue-900 shrink-0">
-            약 ${chg.distanceM}m
+            약 ${escapeHtml(chg.distanceM)}m
           </span>
         </div>
-        <p class="text-xs text-slate-600">${chg.address}</p>
-        <p class="text-xs font-semibold text-slate-700">🕒 운영시간: ${chg.hours}</p>
+        <p class="text-xs text-slate-600">${escapeHtml(chg.address)}</p>
+        <p class="text-xs font-semibold text-slate-700">🕒 운영시간: ${escapeHtml(chg.hours)}</p>
         <div>
-          ${chg.verifiedWaypoint
+          ${chg.verifiedWaypoint === true
             ? '<span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">시연 데이터의 경유 지점 (실제 확인 필요)</span>'
             : '<span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">시연 경유 경로 없음 (직접 확인 필요)</span>'}
         </div>
       </div>
       <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-        <span class="text-slate-500">기준일: ${chg.sourceDate}</span>
-        <a href="tel:${chg.phone.replace(/-/g, '')}" class="font-extrabold text-emerald-700 hover:underline">
-          📞 ${chg.phone} 전화 확인
-        </a>
+        <span class="text-slate-500">기준일: ${escapeHtml(chg.sourceDate)}</span>
+        ${phone
+          ? `<a href="tel:${phone}" class="font-extrabold text-emerald-700 hover:underline">📞 ${escapeHtml(chg.phone)} 전화 확인</a>`
+          : '<span class="font-bold text-slate-600">연락처 확인 불가</span>'}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }

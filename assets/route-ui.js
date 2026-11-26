@@ -49,10 +49,10 @@ function renderRouteResult() {
       <div class="bg-white rounded-2xl border-2 border-rose-300 p-6 space-y-3 shadow-sm">
         <div class="flex items-center gap-2.5 text-rose-700 font-black text-lg">
           <span>🚫</span>
-          <span>경로 확인 불가 (${res.status})</span>
+          <span>경로 확인 불가 (${escapeHtml(res.status)})</span>
         </div>
         <p class="text-sm sm:text-base text-slate-800 font-medium leading-relaxed">
-          ${res.message}
+          ${escapeHtml(res.message)}
         </p>
         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
           <strong>안전 원칙 안내 (TRD 0절):</strong> 턱없이는 정보가 없다는 이유만으로 안전하다고 판단하지 않으며, 대안 데이터가 없으면 경로 확인 불가를 안내합니다. 상단의 <strong>'시범1'</strong> 또는 <strong>'시범2'</strong> 버튼을 눌러 샘플 구간을 시연해 보세요.
@@ -66,6 +66,11 @@ function renderRouteResult() {
   const originPlace = PLACES[state.origin];
   const destPlace = PLACES[state.destination];
   const device = DEVICES[state.device];
+  const mapDataValid = [originPlace.x, originPlace.y, destPlace.x, destPlace.y].every(Number.isFinite)
+    && activeCandidate.segments.every((segment) => isValidPolylinePoints(segment.points))
+    && res.areaBlockedSegments.every((segment) =>
+      Number.isFinite(segment.badgeX) && Number.isFinite(segment.badgeY) && isValidPolylinePoints(segment.points)
+    );
 
   // SVG 지도 폴리라인 생성
   const segmentLinesSvg = activeCandidate.segments.map((seg) => {
@@ -77,7 +82,7 @@ function renderRouteResult() {
     const dashAttr = !['passable', 'caution', 'blocked'].includes(seg.status) ? 'stroke-dasharray="6 6"' : '';
     return `
       <polyline
-        points="${seg.points}"
+        points="${escapeHtml(seg.points)}"
         fill="none"
         stroke="${strokeColor}"
         stroke-width="9"
@@ -92,17 +97,17 @@ function renderRouteResult() {
   const blockedSvg = res.areaBlockedSegments.map((blk) => `
     <g>
       <polyline
-        points="${blk.points}"
+        points="${escapeHtml(blk.points)}"
         fill="none"
         stroke="#dc2626"
         stroke-width="8"
         stroke-linecap="round"
         stroke-dasharray="4 4"
       />
-      <circle cx="${blk.badgeX}" cy="${blk.badgeY}" r="14" fill="#dc2626" stroke="#ffffff" stroke-width="2.5" />
-      <text x="${blk.badgeX}" y="${blk.badgeY + 5}" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">⛔</text>
-      <rect x="${blk.badgeX - 95}" y="${blk.badgeY - 38}" width="190" height="20" rx="6" fill="#7f1d1d" />
-      <text x="${blk.badgeX}" y="${blk.badgeY - 24}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">진입 불가: 계단·단차 회피</text>
+      <circle cx="${escapeHtml(blk.badgeX)}" cy="${escapeHtml(blk.badgeY)}" r="14" fill="#dc2626" stroke="#ffffff" stroke-width="2.5" />
+      <text x="${escapeHtml(blk.badgeX)}" y="${escapeHtml(blk.badgeY + 5)}" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">⛔</text>
+      <rect x="${escapeHtml(blk.badgeX - 95)}" y="${escapeHtml(blk.badgeY - 38)}" width="190" height="20" rx="6" fill="#7f1d1d" />
+      <text x="${escapeHtml(blk.badgeX)}" y="${escapeHtml(blk.badgeY - 24)}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">진입 불가: 계단·단차 회피</text>
     </g>
   `).join('');
 
@@ -111,13 +116,13 @@ function renderRouteResult() {
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <span class="text-xs font-bold text-emerald-700">${res.zoneTitle}</span>
+          <span class="text-xs font-bold text-emerald-700">${escapeHtml(res.zoneTitle)}</span>
           <h3 class="text-lg font-extrabold text-slate-900">
-            ${device.icon} ${device.label} 맞춤 추천 경로 비교
+            ${escapeHtml(device.icon)} ${escapeHtml(device.label)} 맞춤 추천 경로 비교
           </h3>
         </div>
         <div class="text-xs text-slate-500 font-semibold">
-          샘플 기준: ${res.observedAt} | 실제 현장 검증 아님
+          샘플 기준: ${escapeHtml(res.observedAt)} | 실제 현장 검증 아님
         </div>
       </div>
 
@@ -145,14 +150,14 @@ function renderRouteResult() {
             </span>
             ${state.selectedRouteMode === 'easy' ? '<span class="text-xs font-black text-emerald-700">선택됨 ✓</span>' : ''}
           </div>
-          <div class="font-extrabold text-base text-slate-900 mt-1">${res.easy.name}</div>
+          <div class="font-extrabold text-base text-slate-900 mt-1">${escapeHtml(res.easy.name)}</div>
           <div class="flex items-baseline gap-3 mt-2">
-            <span class="text-2xl font-black text-emerald-700">약 ${res.easy.wheelchairMin}분</span>
-            <span class="text-sm font-bold text-slate-600">총 ${res.easy.distanceM}m</span>
+            <span class="text-2xl font-black text-emerald-700">약 ${escapeHtml(res.easy.wheelchairMin)}분</span>
+            <span class="text-sm font-bold text-slate-600">총 ${escapeHtml(res.easy.distanceM)}m</span>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
-            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${res.easy.cautionLengthM}m</span>
-            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${res.easy.unknownLengthM}m</span>
+            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${escapeHtml(res.easy.cautionLengthM)}m</span>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${escapeHtml(res.easy.unknownLengthM)}m</span>
           </div>
         </button>
 
@@ -173,14 +178,14 @@ function renderRouteResult() {
             </span>
             ${state.selectedRouteMode === 'fast' ? '<span class="text-xs font-black text-blue-700">선택됨 ✓</span>' : ''}
           </div>
-          <div class="font-extrabold text-base text-slate-900 mt-1">${res.fast.name}</div>
+          <div class="font-extrabold text-base text-slate-900 mt-1">${escapeHtml(res.fast.name)}</div>
           <div class="flex items-baseline gap-3 mt-2">
-            <span class="text-2xl font-black text-blue-700">약 ${res.fast.wheelchairMin}분</span>
-            <span class="text-sm font-bold text-slate-600">총 ${res.fast.distanceM}m</span>
+            <span class="text-2xl font-black text-blue-700">약 ${escapeHtml(res.fast.wheelchairMin)}분</span>
+            <span class="text-sm font-bold text-slate-600">총 ${escapeHtml(res.fast.distanceM)}m</span>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
-            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${res.fast.cautionLengthM}m</span>
-            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${res.fast.unknownLengthM}m</span>
+            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${escapeHtml(res.fast.cautionLengthM)}m</span>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${escapeHtml(res.fast.unknownLengthM)}m</span>
           </div>
         </button>
       </div>
@@ -210,14 +215,17 @@ function renderRouteResult() {
       </div>
 
       <!-- 지도 뷰 또는 지도 실패 대체 화면 -->
-      ${state.simulateMapError ? `
+      ${state.simulateMapError || !mapDataValid ? `
         <div class="p-5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 space-y-2">
           <div class="font-black text-base flex items-center gap-2">
             <span>⚠️</span>
-            <span>지도 불러오기 실패 (SDK 오류 시연 모드)</span>
+            <span>${state.simulateMapError ? '지도 불러오기 실패 (SDK 오류 시연 모드)' : '지도 도식 데이터 오류'}</span>
           </div>
           <p class="text-xs sm:text-sm">
-            외부 지도 SDK 응답 지연 또는 네트워크 오류로 지도를 표시할 수 없습니다. TRD 장애 대응 원칙에 따라 아래 <strong>조사된 구간별 텍스트 상세 목록</strong>으로 경로를 안내합니다.
+            ${state.simulateMapError
+              ? '이 화면은 지도 오류를 가정한 시연입니다. 실제 지도 SDK는 연결되지 않았습니다.'
+              : '좌표 데이터가 올바르지 않아 도식을 표시할 수 없습니다.'}
+            아래 <strong>시연 구간 텍스트 목록</strong>을 표시합니다.
           </p>
         </div>
       ` : `
@@ -236,19 +244,19 @@ function renderRouteResult() {
             ${segmentLinesSvg}
 
             <!-- 출발지 마커 -->
-            <g transform="translate(${originPlace.x}, ${originPlace.y})">
+            <g transform="translate(${escapeHtml(originPlace.x)}, ${escapeHtml(originPlace.y)})">
               <circle r="15" fill="#0f172a" stroke="#ffffff" stroke-width="3" />
               <text y="4" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">출발</text>
               <rect x="-70" y="20" width="140" height="22" rx="6" fill="#0f172a" />
-              <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${originPlace.name}</text>
+              <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${escapeHtml(originPlace.name)}</text>
             </g>
 
             <!-- 도착지 마커 -->
-            <g transform="translate(${destPlace.x}, ${destPlace.y})">
+            <g transform="translate(${escapeHtml(destPlace.x)}, ${escapeHtml(destPlace.y)})">
               <circle r="15" fill="#059669" stroke="#ffffff" stroke-width="3" />
               <text y="4" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">도착</text>
               <rect x="-80" y="20" width="160" height="22" rx="6" fill="#065f46" />
-              <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${destPlace.name}</text>
+              <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${escapeHtml(destPlace.name)}</text>
             </g>
           </svg>
         </div>
@@ -257,7 +265,7 @@ function renderRouteResult() {
       <!-- 구간별 상세 텍스트 목록 (지도와 항상 함께 제공) -->
       <div class="space-y-2.5 pt-2">
         <h4 class="font-extrabold text-sm sm:text-base text-slate-900">
-          📋 선택 경로 구간별 상세 안내 (${activeCandidate.name})
+          📋 선택 경로 구간별 상세 안내 (${escapeHtml(activeCandidate.name)})
         </h4>
         ${activeCandidate.segments.map((seg, idx) => {
           const st = getStatusStyle(seg.status);
@@ -266,15 +274,15 @@ function renderRouteResult() {
               <div class="space-y-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="font-black text-xs px-2 py-0.5 rounded bg-slate-800 text-white">구간 ${idx + 1}</span>
-                  <span class="font-extrabold text-sm text-slate-900">${seg.name}</span>
+                  <span class="font-extrabold text-sm text-slate-900">${escapeHtml(seg.name)}</span>
                   <span class="text-xs font-bold px-2 py-0.5 rounded border ${st.badgeBg}">
                     ${st.icon} ${st.label}
                   </span>
                 </div>
-                <p class="text-xs sm:text-sm text-slate-700 font-medium">${seg.detail}</p>
+                <p class="text-xs sm:text-sm text-slate-700 font-medium">${escapeHtml(seg.detail)}</p>
               </div>
               <div class="text-sm font-black text-slate-800 shrink-0">
-                거리 ${seg.lengthM}m
+                거리 ${escapeHtml(seg.lengthM)}m
               </div>
             </div>
           `;
@@ -286,10 +294,10 @@ function renderRouteResult() {
             <div class="space-y-1">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-black px-2 py-0.5 rounded bg-rose-600 text-white">⛔ 추천 제외 경로</span>
-                <span class="font-extrabold text-sm text-rose-950">${ex.name}</span>
+                <span class="font-extrabold text-sm text-rose-950">${escapeHtml(ex.name)}</span>
               </div>
               <p class="text-xs text-rose-800 font-semibold">
-                제외 사유: ${ex.segments.filter((s) => s.status === 'blocked').map((s) => s.detail).join(', ')}
+                제외 사유: ${escapeHtml(ex.segments.filter((s) => s.status === 'blocked').map((s) => s.detail).join(', '))}
               </p>
             </div>
             <span class="text-xs font-bold text-rose-700 shrink-0">자동 우회 처리됨</span>
@@ -297,7 +305,7 @@ function renderRouteResult() {
         `).join('')}
         ${res.excludedUnknownCandidates.map((ex) => `
           <div class="p-3.5 rounded-xl border-2 border-slate-300 bg-slate-50 text-sm text-slate-800">
-            <strong>미확인 구간으로 제외:</strong> ${ex.name} (미확인 ${ex.unknownLengthM}m)
+            <strong>미확인 구간으로 제외:</strong> ${escapeHtml(ex.name)} (미확인 ${escapeHtml(ex.unknownLengthM)}m)
           </div>
         `).join('')}
       </div>
