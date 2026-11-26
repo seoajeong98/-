@@ -33,7 +33,7 @@ function renderTransportComparison() {
       <div class="text-2xl font-black text-emerald-700 mt-1">약 ${route.wheelchairMin}분</div>
       <div class="text-xs text-slate-600 font-semibold mt-1">경로 거리 ${route.distanceM}m · 시연속도 ${device.speedKmh}km/h</div>
       <div class="mt-2 text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-1 rounded">
-        출처: 마산 시범조사 경로 (${res.observedAt})
+        출처: 시연 경로 데이터 (${res.observedAt}, 실제 현장 검증 아님)
       </div>
     </div>
 

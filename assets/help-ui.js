@@ -1,8 +1,8 @@
 // Tab 4: 도움 요청 문자 및 링크 동기화
 function updateHelpSmsPreview() {
   const phone = document.getElementById('input-guardian-phone').value.trim();
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  const validPhone = /^[0-9 -]+$/.test(phone) && cleanPhone.length >= 9 && cleanPhone.length <= 11;
+  const cleanPhone = normalizeGuardianPhone(phone);
+  const validPhone = cleanPhone !== null;
   const locationText = state.location
     ? `위치: ${state.location.name}\n좌표: ${state.location.coords}`
     : '위치 미확인: 직접 위치를 확인해 입력해 주세요.';

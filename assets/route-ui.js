@@ -117,7 +117,7 @@ function renderRouteResult() {
           </h3>
         </div>
         <div class="text-xs text-slate-500 font-semibold">
-          현장 조사일: ${res.observedAt} | 출처: 시범조사 샘플
+          샘플 기준: ${res.observedAt} | 실제 현장 검증 아님
         </div>
       </div>
 
@@ -220,12 +220,12 @@ function renderRouteResult() {
         </div>
       ` : `
         <div class="relative w-full overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100">
-          <svg viewBox="0 0 600 265" class="w-full h-auto block" role="img" aria-label="마산 시범 구역 접근성 경로 지도">
+          <svg viewBox="0 0 600 265" class="w-full h-auto block" role="img" aria-label="시연용 경로 도식, 실제 지도가 아닙니다">
             <!-- 배경 격자 및 도로망 모식도 -->
             <rect width="600" height="265" fill="#f1f5f9" />
             <path d="M0 150 H600 M90 0 V265 M510 0 V265 M230 150 L230 265 M380 150 L380 265" stroke="#e2e8f0" stroke-width="14" />
             <path d="M0 235 Q300 225 600 240" fill="none" stroke="#bae6fd" stroke-width="16" />
-            <text x="300" y="240" text-anchor="middle" fill="#0369a1" font-size="10" font-weight="700">광려천 / 마산 생활권 하천 보행축</text>
+            <text x="300" y="240" text-anchor="middle" fill="#0369a1" font-size="10" font-weight="700">시연용 도식 (실제 지도 아님)</text>
 
             <!-- 진입 불가(제외된 경로) 표시 -->
             ${blockedSvg}

@@ -2,15 +2,14 @@
 function renderBatterySection() {
   const pctInput = document.getElementById('input-battery-pct');
   const rangeInput = document.getElementById('input-full-range');
-  const pct = pctInput.value.trim() === '' ? NaN : Number(pctInput.value);
-  const fullKm = rangeInput.value.trim() === '' ? NaN : Number(rangeInput.value);
-  const envFactor = Number(document.getElementById('select-env-factor').value);
+  const parsed = parseBatteryInputs(pctInput.value, rangeInput.value, document.getElementById('select-env-factor').value);
+  const { pct, fullKm, envFactor } = parsed;
   const resultBox = document.getElementById('battery-result-box');
 
   const estKm = calculateBatteryRange(pct, fullKm, envFactor);
-  pctInput.setAttribute('aria-invalid', String(!Number.isFinite(pct) || pct < 0 || pct > 100));
-  rangeInput.setAttribute('aria-invalid', String(!Number.isFinite(fullKm) || fullKm <= 0 || fullKm > 100));
-  if (estKm === null) {
+  pctInput.setAttribute('aria-invalid', String(!parsed.pctValid));
+  rangeInput.setAttribute('aria-invalid', String(!parsed.rangeValid));
+  if (!parsed.pctValid || !parsed.rangeValid || !parsed.factorValid || estKm === null) {
     resultBox.className = 'rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 text-rose-900 font-bold text-sm';
     resultBox.textContent = '⚠️ 배터리 잔량(0~100%), 완충 주행거리(0 초과~100km)와 환경 조건을 확인해 주세요.';
     return;

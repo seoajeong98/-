@@ -50,11 +50,39 @@ test('역방향은 구간과 지도 좌표 순서가 뒤집히고 기기 속도�
   assert.ok(reverse.easy.wheelchairMin > forward.easy.wheelchairMin);
 });
 
+test('가상 시연 구간 C는 양방향에서 계단을 제외하고 별도의 쉬운 길과 빠른 길을 제공한다', () => {
+  const ctx = loadScripts(['data.js', 'logic.js']);
+  const forward = ctx.evaluateRoutes('demo_c_start', 'demo_c_end', 'power_wheelchair');
+  const reverse = ctx.evaluateRoutes('demo_c_end', 'demo_c_start', 'power_wheelchair');
+  assert.equal(forward.status, 'OK');
+  assert.match(forward.zoneTitle, /가상.*실제 장소 아님/);
+  assert.equal(forward.easy.distanceM, 700);
+  assert.equal(forward.fast.distanceM, 520);
+  assert.equal(forward.excludedCandidates[0].id, 'ROUTE-C-3-BLOCKED');
+  assert.ok(!forward.easy.segments.some(segment => segment.status === 'blocked'));
+  assert.ok(!forward.fast.segments.some(segment => segment.status === 'blocked'));
+  assert.equal(reverse.easy.segments[0].id, 'S-C1-3');
+  assert.equal(reverse.easy.segments[0].points, '510,150 380,210');
+});
+
 test('동일 장소, 범위 밖, 알 수 없는 입력에 실제 경로를 만들어내지 않는다', () => {
   const ctx = loadScripts(['data.js', 'logic.js']);
   assert.equal(ctx.evaluateRoutes('masan_univ', 'masan_univ', 'stroller').status, 'INVALID_INPUT');
   assert.equal(ctx.evaluateRoutes('masan_univ', 'happo_office', 'stroller').status, 'OUT_OF_SCOPE');
   assert.equal(ctx.evaluateRoutes('masan_univ', 'naeseo_center', 'unknown').status, 'INVALID_INPUT');
+});
+
+test('동일 출발·도착과 미지원 구간을 선택하면 결과 화면에 각각의 오류가 표시된다', () => {
+  const document = elementsWithValues({ 'route-result-container': '' });
+  const ctx = loadScripts(['data.js', 'state.js', 'logic.js', 'route-ui.js'], {
+    document, renderTransportComparison() {}, renderBatterySection() {}
+  });
+  vm.runInContext("state.origin = 'masan_univ'; state.destination = 'masan_univ'", ctx);
+  ctx.renderRouteResult();
+  assert.match(document.getElementById('route-result-container').innerHTML, /출발지와 도착지가 같습니다/);
+  vm.runInContext("state.destination = 'happo_office'", ctx);
+  ctx.renderRouteResult();
+  assert.match(document.getElementById('route-result-container').innerHTML, /시연용 경로 데이터가 없습니다/);
 });
 
 test('배터리 수식과 경계값을 검증하고 잘못된 수치를 거부한다', () => {
@@ -71,7 +99,7 @@ test('배터리 입력을 비우거나 범위를 초과하면 화면에 오류�
     'input-battery-pct': '45', 'input-full-range': '25', 'select-env-factor': '0.8',
     'battery-result-box': ''
   });
-  const ctx = loadScripts(['state.js', 'logic.js', 'battery-ui.js'], { document });
+  const ctx = loadScripts(['state.js', 'input.js', 'logic.js', 'battery-ui.js'], { document });
   ctx.renderBatterySection();
   assert.match(document.getElementById('battery-result-box').innerHTML, /7\.65 km/);
   document.getElementById('input-battery-pct').value = '';
@@ -84,12 +112,24 @@ test('배터리 입력을 비우거나 범위를 초과하면 화면에 오류�
   assert.equal(document.getElementById('input-full-range').attributes['aria-invalid'], 'true');
 });
 
+test('입력 파서는 빈 값과 범위 밖을 구분하고 0%, 100% 경계값을 허용한다', () => {
+  const ctx = loadScripts(['input.js']);
+  for (const pct of ['0', '100']) {
+    assert.equal(ctx.parseBatteryInputs(pct, '100', '1').pctValid, true);
+  }
+  assert.equal(ctx.parseBatteryInputs('', '25', '0.8').pctValid, false);
+  assert.equal(ctx.parseBatteryInputs('101', '25', '0.8').pctValid, false);
+  assert.equal(ctx.parseBatteryInputs('50', '0', '0.8').rangeValid, false);
+  assert.equal(ctx.parseBatteryInputs('50', '100.1', '0.8').rangeValid, false);
+  assert.equal(ctx.parseBatteryInputs('50', '25', '').factorValid, false);
+});
+
 test('위치와 연락처를 지정하기 전에는 가짜 좌표나 연락처를 사용하지 않는다', () => {
   const document = elementsWithValues({
     'input-guardian-phone': '', 'sms-preview': '', 'link-call-guardian': '', 'link-sms-guardian': '',
     'loc-name': '', 'loc-coords': '', 'loc-accuracy': '', 'loc-time': ''
   });
-  const ctx = loadScripts(['state.js', 'help-ui.js'], { document });
+  const ctx = loadScripts(['state.js', 'input.js', 'help-ui.js'], { document });
   ctx.updateLocationDisplay();
   assert.match(document.getElementById('sms-preview').value, /위치 미확인/);
   assert.equal(document.getElementById('loc-coords').textContent, '미확인');

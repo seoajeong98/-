@@ -1,13 +1,22 @@
 /**
  * 3. TRD 순수 판정 및 계산 함수
  */
-// 소요시간 계산: ceil(distanceM / (speedKmh * 1000 / 3600)) -> 분 단위 올림
+/**
+ * @param {number} distanceM 거리(m)
+ * @param {number} speedKmh 시연 속도(km/h), 0보다 큰 값
+ * @returns {number} 분 단위로 올림한 예상 시간
+ */
 function calcDurationMinutes(distanceM, speedKmh) {
   const durationSec = Math.ceil(distanceM / ((speedKmh * 1000) / 3600));
   return Math.max(1, Math.ceil(durationSec / 60));
 }
 
-// TRD 1.3 A.4~5 경로 후보 평가 및 쉬운 길 / 빠른 길 선정
+/**
+ * @param {string} originId 시연 출발지 ID
+ * @param {string} destId 시연 도착지 ID
+ * @param {string} deviceId 이동기기 ID
+ * @returns {object} 성공 시 status=OK와 easy·fast·excludedCandidates, 실패 시 status와 message
+ */
 function evaluateRoutes(originId, destId, deviceId) {
   if (!Object.hasOwn(PLACES, originId) || !Object.hasOwn(PLACES, destId) || !Object.hasOwn(DEVICES, deviceId)) {
     return { status: 'INVALID_INPUT', message: '출발지, 도착지와 이동기기를 다시 선택해 주세요.' };
@@ -100,7 +109,12 @@ function evaluateRoutes(originId, destId, deviceId) {
   };
 }
 
-// TRD 1.3 C.2 배터리 주행거리 공식
+/**
+ * @param {number} pct 배터리 잔량(0~100)
+ * @param {number} fullKm 완충 주행거리(0 초과~100km)
+ * @param {number} envFactor 시연 환경계수(0.8 또는 1)
+ * @returns {number|null} 소수 둘째 자리의 추정 거리(km), 잘못된 입력이면 null
+ */
 function calculateBatteryRange(pct, fullKm, envFactor) {
   if (!Number.isFinite(pct) || pct < 0 || pct > 100 ||
       !Number.isFinite(fullKm) || fullKm <= 0 || fullKm > 100 ||

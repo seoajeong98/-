@@ -21,7 +21,9 @@ const PLACES = {
   naeseo_center: { id: 'naeseo_center', name: '내서읍 행정복지센터', zone: 'A', lat: 35.2415, lng: 128.5112, x: 510, y: 150 },
   masan_terminal: { id: 'masan_terminal', name: '마산시외버스터미널', zone: 'B', lat: 35.2368, lng: 128.5824, x: 90, y: 150 },
   hapseong_under: { id: 'hapseong_under', name: '합성동 지하상가 3번출구 인근', zone: 'B', lat: 35.2389, lng: 128.5841, x: 510, y: 150 },
-  happo_office: { id: 'happo_office', name: '마산합포구청', zone: 'OUT', lat: 35.1795, lng: 128.5665, x: 300, y: 260 }
+  happo_office: { id: 'happo_office', name: '마산합포구청', zone: 'OUT', lat: 35.1795, lng: 128.5665, x: 300, y: 260 },
+  demo_c_start: { id: 'demo_c_start', name: '가상 지점 C-1', zone: 'C', x: 90, y: 150 },
+  demo_c_end: { id: 'demo_c_end', name: '가상 지점 C-2', zone: 'C', x: 510, y: 150 }
 };
 
 /**
@@ -123,6 +125,52 @@ const DEMO_SCENARIOS = {
   }
 };
 
+// 실제 장소나 현장 조사 결과가 아닌 가상의 세 번째 시연 구간
+DEMO_SCENARIOS['demo_c_start__demo_c_end'] = {
+  zoneTitle: '가상 시연 구역 C (실제 장소 아님)',
+  observedAt: '가상 데이터',
+  areaBlockedSegments: [{
+    id: 'SEG-C-BLK-01',
+    title: '가상 계단',
+    reason: '시연용 계단으로 표시된 구간',
+    lengthM: 80,
+    points: '210,75 390,75',
+    badgeX: 300,
+    badgeY: 62
+  }],
+  candidates: [
+    {
+      id: 'ROUTE-C-1',
+      name: '가상 완만 우회 경로',
+      carDurationMin: 3,
+      segments: [
+        { id: 'S-C1-1', name: '가상 지점 C-1 출발 구간', lengthM: 240, status: 'passable', detail: '시연상 양호', points: '90,150 230,210' },
+        { id: 'S-C1-2', name: '가상 완만 경사 구간', lengthM: 180, status: 'caution', detail: '시연상 경사 주의', points: '230,210 380,210' },
+        { id: 'S-C1-3', name: '가상 지점 C-2 접근 구간', lengthM: 280, status: 'passable', detail: '시연상 양호', points: '380,210 510,150' }
+      ]
+    },
+    {
+      id: 'ROUTE-C-2',
+      name: '가상 미확인 직선 경로',
+      carDurationMin: 3,
+      segments: [
+        { id: 'S-C2-1', name: '가상 직선 구간', lengthM: 220, status: 'passable', detail: '시연상 양호', points: '90,150 280,150' },
+        { id: 'S-C2-2', name: '가상 미확인 구간', lengthM: 300, status: 'unknown', detail: '시연상 상태 미확인', points: '280,150 510,150' }
+      ]
+    },
+    {
+      id: 'ROUTE-C-3-BLOCKED',
+      name: '가상 계단 지름길 (추천 제외)',
+      carDurationMin: 3,
+      segments: [
+        { id: 'S-C3-1', name: '가상 계단 진입', lengthM: 160, status: 'passable', detail: '시연상 양호', points: '90,150 210,75' },
+        { id: 'S-C3-2', name: '가상 계단', lengthM: 80, status: 'blocked', detail: '시연용 계단으로 진입 불가', points: '210,75 390,75' },
+        { id: 'S-C3-3', name: '가상 계단 출구', lengthM: 160, status: 'passable', detail: '시연상 양호', points: '390,75 510,150' }
+      ]
+    }
+  ]
+};
+
 // 역방향에서는 구간 순서와 선의 방향을 함께 뒤집는다.
 function reverseScenario(scenario, zoneTitle) {
   return {
@@ -144,6 +192,10 @@ DEMO_SCENARIOS['naeseo_center__masan_univ'] = reverseScenario(
 DEMO_SCENARIOS['hapseong_under__masan_terminal'] = reverseScenario(
   DEMO_SCENARIOS['masan_terminal__hapseong_under'],
   '마산 시범 구역 B 역방향 (합성동 지하상가 인근 → 마산시외버스터미널)'
+);
+DEMO_SCENARIOS['demo_c_end__demo_c_start'] = reverseScenario(
+  DEMO_SCENARIOS['demo_c_start__demo_c_end'],
+  '가상 시연 구역 C 역방향 (실제 장소 아님)'
 );
 
 // 시범 정류장 및 저상버스 샘플 데이터
