@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>턱없이 - 이동약자 맞춤 간편 길찾기 (팀 프리웨이)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Pretendard / Noto Sans KR Webfont for crisp Korean legibility -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+          },
+          colors: {
+            easy: '#16A34A',     // 쉬운 길: 초록색
+            fast: '#2563EB',     // 빠른 길: 파란색
+            caution: '#EA580C',  // 주의 구간: 주황색
+            danger: '#DC2626',   // 진입 불가 구간: 빨간색
+            unknown: '#6B7280',  // 정보 미확인 구간: 회색
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 기본 스크롤바 및 모바일 앱 프레임 최적화 */
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #E2E8F0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 고대비 + 큰 글씨 모드 스타일 오버라이드 */
+    body.high-contrast {
+      background-color: #000000 !important;
+      color: #FFFFFF !important;
+    }
+    body.high-contrast .app-shell {
+      background-color: #09090B !important;
+      border-color: #FACC15 !important;
+      color: #FFFFFF !important;
+    }
+    body.high-contrast .hc-card {
+      background-color: #18181B !important;
+      border: 2px solid #FACC15 !important;
+      color: #FFFFFF !important;
+    }
+    body.high-contrast .hc-subcard {
+      background-color: #27272A !important;
+      border: 1.5px solid #A1A1AA !important;
+      color: #FFFFFF !important;
+    }
+    body.high-contrast .hc-text-muted {
+      color: #E4E4E7 !important;
+    }
+    body.high-contrast .hc-input {
+      background-color: #000000 !important;
+      color: #FACC15 !important;
+      border: 2px solid #FACC15 !important;
+    }
+    body.high-contrast .hc-nav {
+      background-color: #000000 !important;
+      border-top: 2px solid #FACC15 !important;
+    }
+
+    /* 큰 글씨 모드 배율 조정 */
+    html.large-text {
+      font-size: 18px;
+    }
+
+    /* SVG 경로 애니메이션 */
+    @keyframes dashFlow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .route-animated {
+      stroke-dasharray: 8 4;
+      animation: dashFlow 1.2s linear infinite;
+    }
+
+    /* 지도 핀 펄스 효과 */
+    @keyframes pulseRing {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      70% { transform: scale(1.45); opacity: 0; }
+      100% { transform: scale(1.45); opacity: 0; }
+    }
+    .pin-pulse {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: pulseRing 2s infinite ease-out;
+    }
+
+    /* 커스텀 스크롤바 숨김 (깔끔한 가로 스크롤용) */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex justify-center items-start md:py-4 selection:bg-emerald-200">
+
+  <!-- 모바일 퍼스트 앱 컨테이너 (데스크톱에서는 깔끔한 모바일 뷰포트 프레임) -->
+  <div id="appShell" class="app-shell w-full max-w-[460px] min-h-screen md:min-h-[860px] md:max-h-[900px] bg-slate-50 text-slate-900 md:rounded-[2rem] md:shadow-2xl md:border-4 md:border-slate-800 flex flex-col relative overflow-hidden">
+
+    <!-- 0. 상단 시제품 고지 배너 (PRD 필수 고지사항) -->
+    <div class="bg-amber-400 text-slate-950 px-3 py-1.5 text-xs font-bold flex items-center justify-between gap-2 border-b border-amber-500 shrink-0" role="region" aria-label="시제품 안내 배너">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+        <span>시제품 시연용 데이터 포함 (실제 이동 안전을 보장하지 않음)</span>
+      </div>
+      <span class="bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-extrabold shrink-0">팀 프리웨이</span>
+    </div>
+
+    <!-- 1. 헤더 및 접근성/이동기기 컨트롤 -->
+    <header class="hc-card bg-white px-4 pt-3 pb-2.5 border-b border-slate-200 shrink-0 z-20">
+      <div class="flex items-center justify-between gap-2 mb-2.5">
+        <div class="flex items-center gap-2">
+          <!-- 브랜드 로고 아이콘 -->
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 class="text-xl font-black tracking-tight leading-none">턱없이</h1>
+              <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">창원·마산 시범</span>
+            </div>
+            <p class="hc-text-muted text-xs text-slate-600 font-medium mt-0.5">이동약자 맞춤 간편 길찾기</p>
+          </div>
+        </div>
+
+        <!-- 접근성 즉시 전환 버튼 (고대비 + 큰 글씨) -->
+        <button id="a11yToggleBtn" type="button" onclick="toggleAccessibilityMode()"
+          class="px-3 py-2 rounded-xl border-2 border-slate-900 bg-slate-900 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition focus:outline-none focus:ring-4 focus:ring-amber-400"
+          aria-pressed="false" aria-label="고대비 및 큰 글씨 모드 전환">
+          <svg class="w-4 h-4 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14V4a6 6 0 010 12z"/>
+          </svg>
+          <span id="a11yBtnLabel">고대비·큰글씨</span>
+        </button>
+      </div>
+
+      <!-- 이동기기 선택기 (가로 스크롤 터치 최적화) -->
+      <div role="radiogroup" aria-label="이동기기 종류 선택" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        <button type="button" data-device="electric_wc" onclick="selectDevice('electric_wc')"
+          class="device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition flex items-center gap-1.5 bg-emerald-600 text-white border-emerald-700 shadow-sm">
+          <span>♿</span><span>전동휠체어</span>
+        </button>
+        <button type="button" data-device="manual_wc" onclick="selectDevice('manual_wc')"
+          class="device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200">
+          <span>🧑‍🦽</span><span>수동휠체어</span>
+        </button>
+        <button type="button" data-device="scooter" onclick="selectDevice('scooter')"
+          class="device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200">
+          <span>🛵</span><span>전동스쿠터</span>
+        </button>
+        <button type="button" data-device="stroller" onclick="selectDevice('stroller')"
+          class="device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200">
+          <span>🍼</span><span>유모차·보행기</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 메인 스크롤 컨텐츠 영역 -->
+    <main class="flex-1 overflow-y-auto pb-24 space-y-3 p-3.5" id="mainScrollArea">
+
+      <!-- ========================================================= -->
+      <!-- TAB 1: 길찾기 · 지도 (P1 핵심 기능)                        -->
+      <!-- ========================================================= -->
+      <section id="tab-map" class="tab-panel space-y-3" aria-label="길찾기 및 접근성 지도">
+
+        <!-- 출발지 / 도착지 검색 카드 -->
+        <div class="hc-card bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-2.5">
+          <!-- 시범 구간 빠른 프리셋 선택 -->
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">📍 마산 시범 구간 추천 코스</span>
+            <span class="hc-text-muted text-[11px] text-slate-500">전국 검색 지원</span>
+          </div>
+          <div class="flex gap-1.5 overflow-x-auto no-scrollbar">
+            <button type="button" onclick="applyPresetRoute('masan_univ')"
+              class="preset-chip shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100">
+              마산대 → 시외버스터미널
+            </button>
+            <button type="button" onclick="applyPresetRoute('masan_station')"
+              class="preset-chip shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">
+              마산역 → 마산합포구청
+            </button>
+            <button type="button" onclick="applyPresetRoute('kyungnam_univ')"
+              class="preset-chip shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">
+              경남대 → 마산어시장
+            </button>
+          </div>
+
+          <!-- 출발지 / 도착지 입력창 및 스왑 버튼 -->
+          <div class="flex items-center gap-2">
+            <div class="flex-1 space-y-1.5">
+              <div class="relative flex items-center">
+                <span class="absolute left-3 w-2.5 h-2.5 rounded-full bg-emerald-600" aria-hidden="true"></span>
+                <input id="originInput" type="text" value="마산대학교 정문" aria-label="출발지 입력"
+                  class="hc-input w-full pl-8 pr-3 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="출발지 입력 (전국 검색)" />
+              </div>
+              <div class="relative flex items-center">
+                <span class="absolute left-3 w-2.5 h-2.5 rounded-full bg-blue-600" aria-hidden="true"></span>
+                <input id="destInput" type="text" value="마산시외버스터미널" aria-label="도착지 입력"
+                  class="hc-input w-full pl-8 pr-3 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="도착지 입력 (전국 검색)" />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <button type="button" onclick="swapLocations()" aria-label="출발지와 도착지 바꾸기"
+                class="hc-subcard p-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 active:scale-95 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+              <button type="button" onclick="searchCustomRoute()" aria-label="경로 검색 실행"
+                class="p-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 active:scale-95 transition shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 기기별 맞춤 판단 기준 안내 배지 -->
+          <div id="deviceCriteriaBanner" class="hc-subcard bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-emerald-900 flex items-center justify-between">
+            <span>♿ 전동휠체어 기준: 유효폭 1.2m↑ · 단차 2cm↓ · 경사 4.8°↓</span>
+            <span class="underline cursor-pointer shrink-0 ml-1" onclick="showToast('법정 시설기준(교통약자법 시행규칙) 및 현장조사 데이터를 적용합니다.')">기준보기</span>
+          </div>
+        </div>
+
+        <!-- 쉬운 길 vs 빠른 길 토글 비교 카드 -->
+        <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="추천 경로 유형 선택">
+          <!-- 쉬운 길 (초록색 #16A34A) -->
+          <button type="button" id="cardEasyRoute" onclick="selectRouteType('easy')"
+            class="hc-card text-left p-3 rounded-2xl border-[3px] border-easy bg-white shadow-md transition relative overflow-hidden">
+            <div class="flex items-center justify-between mb-1">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-easy text-white text-xs font-black">
+                ✓ 쉬운 길
+              </span>
+              <span class="text-[11px] font-extrabold text-easy">턱·계단 회피</span>
+            </div>
+            <div class="text-xl font-black text-slate-900 dark:text-inherit" id="easyTimeText">24분</div>
+            <div class="hc-text-muted text-xs font-bold text-slate-600 mt-0.5">
+              거리 <span id="easyDistText">1.8 km</span> · 단차 0곳
+            </div>
+            <p class="mt-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+              안전 우회 경로 (경사 완만)
+            </p>
+          </button>
+
+          <!-- 빠른 길 (파란색 #2563EB) -->
+          <button type="button" id="cardFastRoute" onclick="selectRouteType('fast')"
+            class="hc-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-white/90 hover:bg-white shadow-sm transition relative overflow-hidden">
+            <div class="flex items-center justify-between mb-1">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-fast text-white text-xs font-black">
+                ⚡ 빠른 길
+              </span>
+              <span class="text-[11px] font-extrabold text-danger" id="fastWarningBadge">진입불가 2곳!</span>
+            </div>
+            <div class="text-xl font-black text-slate-900 dark:text-inherit" id="fastTimeText">16분</div>
+            <div class="hc-text-muted text-xs font-bold text-slate-600 mt-0.5">
+              거리 <span id="fastDistText">1.3 km</span> · 최단거리
+            </div>
+            <p class="mt-1.5 text-[11px] font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg" id="fastWarningNote">
+              ⚠ 계단·높은 단차 포함됨
+            </p>
+          </button>
+        </div>
+
+        <!-- 인터랙티브 마산 시범 구역 접근성 지도 캔버스 (SVG) -->
+        <div class="hc-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- 지도 상단 범례 바 -->
+          <div class="px-3 py-2 bg-slate-100 border-b border-slate-200 flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-extrabold">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1 text-slate-800"><span class="w-3 h-1.5 rounded bg-easy inline-block"></span>쉬운길</span>
+              <span class="inline-flex items-center gap-1 text-slate-800"><span class="w-3 h-1.5 rounded bg-fast inline-block"></span>빠른길</span>
+              <span class="inline-flex items-center gap-1 text-danger"><span class="w-2.5 h-2.5 rounded-full bg-danger inline-block"></span>진입불가</span>
+              <span class="inline-flex items-center gap-1 text-caution"><span class="w-2.5 h-2.5 rounded-full bg-caution inline-block"></span>주의</span>
+              <span class="inline-flex items-center gap-1 text-unknown"><span class="w-2.5 h-2.5 rounded-full bg-unknown inline-block"></span>미확인</span>
+            </div>
+            <span class="text-slate-500 font-bold">핀 터치 시 상세확인</span>
+          </div>
+
+          <!-- SVG 지도 영역 -->
+          <div class="relative w-full aspect-[4/3] bg-[#EEF2F6] select-none" id="mapContainer">
+            <svg id="masanMapSvg" viewBox="0 0 400 300" class="w-full h-full block" role="img" aria-label="마산 시범 구역 접근성 경로 지도">
+              <!-- 배경 지형 (마산만 해안선 및 하천 힌트) -->
+              <rect width="400" height="300" fill="#E8EEF4" />
+              <!-- 마산만 바다 영역 (우측 하단) -->
+              <path d="M 290,300 Q 315,240 355,210 T 400,175 L 400,300 Z" fill="#BAE6FD" />
+              <text x="342" y="272" fill="#0369A1" font-size="11" font-weight="800" opacity="0.85">마산만</text>
+
+              <!-- 산악/녹지 블록 (무학산 자락 좌측 상단) -->
+              <path d="M 0,0 L 130,0 Q 110,65 65,90 T 0,120 Z" fill="#DCFCE7" opacity="0.8" />
+              <text x="16" y="34" fill="#15803D" font-size="10" font-weight="700">무학산 방면(경사지)</text>
+
+              <!-- 시가지 블록 구획 -->
+              <rect x="75" y="65" width="75" height="55" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+              <rect x="175" y="60" width="90" height="60" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+              <rect x="65" y="145" width="90" height="65" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+              <rect x="180" y="145" width="95" height="65" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+              <rect x="105" y="230" width="130" height="45" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+
+              <!-- 일반 도로망 (보도 포함) -->
+              <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <path d="M 45,75 L 160,75 L 285,75 L 350,95" />
+                <path d="M 45,132 L 165,132 L 290,132 L 355,155" />
+                <path d="M 55,220 L 170,220 L 285,220" />
+                <path d="M 55,75 L 55,220 L 85,270" />
+                <path d="M 165,40 L 165,245" />
+                <path d="M 285,55 L 285,235" />
+              </g>
+              <!-- 도로 외곽선 -->
+              <g stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="4 4" fill="none">
+                <path d="M 45,132 L 290,132" />
+                <path d="M 165,40 L 165,245" />
+              </g>
+
+              <!-- 주요 랜드마크 라벨 -->
+              <text x="86" y="96" fill="#475569" font-size="10" font-weight="700">내서·중리 방면</text>
+              <text x="190" y="94" fill="#475569" font-size="10" font-weight="700">합성동 상권</text>
+              <text x="80" y="180" fill="#475569" font-size="10" font-weight="700">마산역 광장</text>
+              <text x="194" y="180" fill="#475569" font-size="10" font-weight="700">3·15대로 평지보도</text>
+              <text x="130" y="256" fill="#475569" font-size="10" font-weight="700">마산합포구청·어시장</text>
+
+              <!-- 동적 경로 레이어 (JS로 업데이트) -->
+              <g id="mapRoutesLayer"></g>
+
+              <!-- 동적 마커 및 장애물 핀 레이어 (JS로 업데이트) -->
+              <g id="mapMarkersLayer"></g>
+            </svg>
+
+            <!-- 지도 우측 하단 빠른 우회/전체경로 보기 플로팅 버튼 -->
+            <button type="button" onclick="selectRouteType(state.routeType === 'easy' ? 'fast' : 'easy')"
+              class="absolute bottom-2.5 right-2.5 bg-slate-900/90 text-white text-xs font-extrabold px-3 py-2 rounded-xl shadow-lg backdrop-blur-sm flex items-center gap-1.5 active:scale-95 transition">
+              <span>🔄</span>
+              <span id="mapSwitchRouteText">빠른 길 비교하기</span>
+            </button>
+          </div>
+
+          <!-- 핀 클릭 시 나타나는 상세 정보 카드 (기본 표시: 첫 번째 주요 장애물 또는 안내) -->
+          <div id="markerDetailCard" class="p-3.5 bg-red-50 border-t-2 border-red-200 transition-all">
+            <!-- JS에서 선택된 마커 상세 내용 렌더링 -->
+          </div>
+        </div>
+
+        <!-- 2) 이동수단별 시간 비교 (휠체어 · 도보 · 자동차) (P1) -->
+        <div class="hc-card bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200">
+          <div class="flex items-center justify-between mb-2.5">
+            <h2 class="text-sm font-black flex items-center gap-1.5">
+              <span>⏱️</span>
+              <span>이동수단별 소요시간 비교</span>
+            </h2>
+            <span class="hc-text-muted text-[11px] font-bold text-slate-500" id="activeRouteLabel">쉬운 길 기준</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <!-- 휠체어/이동기기 -->
+            <div class="hc-subcard p-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-500">
+              <div class="text-lg mb-0.5" id="compareDeviceIcon">♿</div>
+              <div class="text-xs font-extrabold text-emerald-900" id="compareDeviceName">전동휠체어</div>
+              <div class="text-lg font-black text-emerald-700 mt-0.5" id="timeWheelchair">24분</div>
+              <div class="text-[11px] font-bold text-slate-600" id="distWheelchair">1.8 km</div>
+            </div>
+
+            <!-- 일반 도보 -->
+            <div class="hc-subcard p-2.5 rounded-xl bg-slate-100 border border-slate-200">
+              <div class="text-lg mb-0.5">🚶</div>
+              <div class="text-xs font-extrabold text-slate-700">일반 도보</div>
+              <div class="text-lg font-black text-slate-900 mt-0.5" id="timeWalk">27분</div>
+              <div class="text-[11px] font-bold text-slate-500" id="distWalk">1.8 km</div>
+            </div>
+
+            <!-- 자동차 / 특별교통수단 -->
+            <div class="hc-subcard p-2.5 rounded-xl bg-slate-100 border border-slate-200">
+              <div class="text-lg mb-0.5">🚗</div>
+              <div class="text-xs font-extrabold text-slate-700">자동차·콜</div>
+              <div class="text-lg font-black text-slate-900 mt-0.5" id="timeCar">7분</div>
+              <div class="text-[11px] font-bold text-slate-500" id="distCar">2.1 km</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- TAB 2: 저상버스 · 대중교통 안내 (P1)                        -->
+      <!-- ========================================================= -->
+      <section id="tab-bus" class="tab-panel hidden space-y-3" aria-label="실시간 저상버스 도착 안내">
+        <div class="hc-card bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-black">🚌 주변 정류장 저상버스 조회</h2>
+              <p class="hc-text-muted text-xs text-slate-600 font-medium">국토부 TAGO · 창원시 BIS 연동 시연</p>
+            </div>
+            <button type="button" onclick="refreshBusTimes()"
+              class="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-extrabold flex items-center gap-1 active:scale-95 transition">
+              <span>🔄</span><span>새로고침</span>
+            </button>
+          </div>
+
+          <!-- 정류장 선택 탭 -->
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="stopBtn0" onclick="selectBusStop(0)"
+              class="p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50 text-left">
+              <div class="text-xs font-black text-blue-900">합성동시외버스터미널</div>
+              <div class="text-[11px] font-bold text-blue-700">도보·휠체어 120m (단차없음)</div>
+            </button>
+            <button type="button" id="stopBtn1" onclick="selectBusStop(1)"
+              class="hc-subcard p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-left">
+              <div class="text-xs font-black text-slate-800">마산역 앞 정류장</div>
+              <div class="text-[11px] font-bold text-slate-500">도보·휠체어 240m (경사로)</div>
+            </button>
+          </div>
+
+          <!-- 실시간 버스 도착 목록 -->
+          <div id="busArrivalList" class="space-y-2.5">
+            <!-- JS 동적 렌더링 -->
+          </div>
+
+          <!-- PRD 필수 고지 문구 -->
+          <div class="p-3 rounded-xl bg-amber-50 border border-amber-300 text-xs font-bold text-amber-950 leading-relaxed">
+            ※ 저상버스 배차 정보만으로 실제 휠체어 탑승 가능 여부(리프트 작동 상태, 차내 휠체어석 만차, 정류장 불법주정차 등)를 보장하지 않습니다.
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- TAB 3: 배터리 예측 · 급속충전소 (P2)                      -->
+      <!-- ========================================================= -->
+      <section id="tab-battery" class="tab-panel hidden space-y-3" aria-label="배터리 주행거리 계산 및 급속충전소">
+
+        <!-- 전동기기 비활성화 안내 (수동휠체어/유모차 선택 시에도 시연 가능하도록 안내) -->
+        <div id="nonElectricNotice" class="hidden p-3 rounded-2xl bg-slate-800 text-amber-300 text-xs font-bold">
+          💡 현재 비전동 이동기기가 선택되어 있습니다. 아래 계산기는 전동휠체어·전동스쿠터 기준으로 시연할 수 있습니다.
+        </div>
+
+        <!-- 배터리 주행거리 추정기 카드 -->
+        <div class="hc-card bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-black">🔋 배터리 예상 주행거리 계산기</h2>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[11px] font-extrabold">시연용 추정 공식</span>
+          </div>
+
+          <!-- 도달 가능 여부 상태 배지 (핵심 피드백) -->
+          <div id="batteryStatusBox" class="p-3.5 rounded-2xl bg-emerald-600 text-white shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold opacity-90">현재 선택 경로 (<span id="batRouteDist">1.8</span>km) 기준</span>
+              <span id="batReachBadge" class="px-2.5 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black">
+                목적지 왕복 가능 ✓
+              </span>
+            </div>
+            <div class="mt-1.5 flex items-baseline gap-2">
+              <span class="text-3xl font-black" id="estimatedRangeText">13.8 km</span>
+              <span class="text-xs font-bold opacity-90">주행 가능 추정</span>
+            </div>
+            <p class="text-[11px] mt-1.5 opacity-95 font-medium" id="batteryFormulaBreakdown">
+              계산식: 25km × (65% / 100) × 1.0(평지) × 0.85 = 13.81km
+            </p>
+          </div>
+
+          <!-- 1) 배터리 잔량 (%) 슬라이더 & 입력 -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label for="batterySlider" class="text-xs font-extrabold">현재 배터리 잔량 (%)</label>
+              <div class="flex items-center gap-1">
+                <input id="batteryNumInput" type="number" min="1" max="100" value="65" oninput="syncBatteryInput(this.value)"
+                  class="hc-input w-16 px-2 py-1 text-right rounded-lg border border-slate-300 bg-slate-100 font-black text-sm" />
+                <span class="text-sm font-black">%</span>
+              </div>
+            </div>
+            <input id="batterySlider" type="range" min="1" max="100" value="65" oninput="syncBatteryInput(this.value)"
+              class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+            <div class="flex justify-between text-[11px] font-bold text-slate-500">
+              <span>10% (위험)</span>
+              <span>50%</span>
+              <span>100% (완충)</span>
+            </div>
+          </div>
+
+          <!-- 2) 완충 기준 주행거리 & 환경 조건(지형 계수) -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="maxRangeInput" class="block text-xs font-extrabold mb-1">완충 기준 주행거리(km)</label>
+              <input id="maxRangeInput" type="number" min="5" max="100" value="25" oninput="calculateBattery()"
+                class="hc-input w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 font-black text-sm" />
+            </div>
+            <div>
+              <span class="block text-xs font-extrabold mb-1">주행 환경 조건</span>
+              <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-300">
+                <button type="button" id="terrainFlatBtn" onclick="setTerrainFactor(1.0)"
+                  class="py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white shadow-sm">
+                  평지 1.0
+                </button>
+                <button type="button" id="terrainSlopeBtn" onclick="setTerrainFactor(0.8)"
+                  class="py-1.5 rounded-lg text-xs font-bold text-slate-700">
+                  경사 0.8
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p class="hc-text-muted text-[11px] text-slate-500 leading-snug">
+            * 공식: 완충 주행거리 × (잔량/100) × 환경계수(평지 1.0 / 경사 0.8) × 안전여유계수(0.85). 기온·배터리 노후도에 따라 실제 주행거리는 달라질 수 있습니다.
+          </p>
+        </div>
+
+        <!-- 주변 전동휠체어 급속충전소 목록 & 경유지 추가 -->
+        <div class="hc-card bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-black">⚡ 주변 전동휠체어 급속충전소</h3>
+              <p class="hc-text-muted text-[11px] text-slate-500 font-bold">전국전동휠체어급속충전기표준데이터 기반</p>
+            </div>
+            <span class="text-xs font-extrabold text-emerald-700">마산권 3곳</span>
+          </div>
+
+          <div id="chargingStationList" class="space-y-2.5">
+            <!-- JS에서 동적 렌더링 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- TAB 4: 방전 · 긴급 도움 요청 (P3)                         -->
+      <!-- ========================================================= -->
+      <section id="tab-sos" class="tab-panel hidden space-y-3" aria-label="방전 및 긴급 도움 요청">
+        <div class="hc-card bg-white rounded-2xl p-4 shadow-sm border-2 border-red-500 space-y-3.5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center text-2xl shrink-0 shadow">
+              🆘
+            </div>
+            <div>
+              <h2 class="text-lg font-black text-red-600">방전·위급 상황 도움 요청</h2>
+              <p class="hc-text-muted text-xs font-bold text-slate-600">현재 GPS 위치를 자동으로 첨부하여 연결합니다.</p>
+            </div>
+          </div>
+
+          <!-- 현재 위치 카드 (GPS + Reverse Geocoding 시연) -->
+          <div class="hc-subcard p-3.5 rounded-xl bg-slate-100 border border-slate-300 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-emerald-700 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-600 animate-ping"></span>
+                현재 추정 위치 (GPS 연동됨)
+              </span>
+              <button type="button" onclick="refreshGpsLocation()" class="text-xs font-extrabold underline text-blue-700">
+                위치 갱신
+              </button>
+            </div>
+            <div id="currentGpsAddress" class="text-sm font-black text-slate-900">
+              경상남도 창원시 마산회원구 합성남로 12 (합성동 시외버스터미널 인근)
+            </div>
+            <div class="text-[11px] font-bold text-slate-500 flex items-center justify-between pt-1">
+              <span id="gpsCoordsText">위도 35.2384 · 경도 128.5812</span>
+              <button type="button" onclick="copyCurrentAddress()" class="px-2 py-1 rounded bg-white border border-slate-300 text-slate-800 font-extrabold active:scale-95">
+                📋 주소 복사
+              </button>
+            </div>
+          </div>
+
+          <!-- 원터치 긴급 액션 버튼 3종 -->
+          <div class="space-y-2.5 pt-1">
+            <!-- 1. 보호자 긴급 문자 전송 -->
+            <button type="button" onclick="triggerEmergencyAction('guardian')"
+              class="w-full p-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-left flex items-center justify-between shadow-md active:scale-[0.99] transition">
+              <div>
+                <div class="text-base">📩 보호자 긴급 문자 전송</div>
+                <div class="text-xs font-bold opacity-90 mt-0.5">현재 위치 좌표 + 배터리 방전 도움 요청 메시지 자동 작성</div>
+              </div>
+              <span class="text-xl font-black">→</span>
+            </button>
+
+            <!-- 2. 창원시설공단 누비콜 / 이동지원센터 연결 -->
+            <button type="button" onclick="triggerEmergencyAction('nubicall')"
+              class="w-full p-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-left flex items-center justify-between shadow-md active:scale-[0.99] transition">
+              <div>
+                <div class="text-base">🚐 창원 누비콜 · 이동지원센터</div>
+                <div class="text-xs font-bold text-blue-100 mt-0.5">교통약자 특별교통수단 배차 상담 (1588-9222)</div>
+              </div>
+              <span class="text-xl font-black">📞</span>
+            </button>
+
+            <!-- 3. 119 위급 상황 신고 -->
+            <button type="button" onclick="triggerEmergencyAction('119')"
+              class="w-full p-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-left flex items-center justify-between shadow-md active:scale-[0.99] transition">
+              <div>
+                <div class="text-base">🚨 119 위급 상황 신고 연결</div>
+                <div class="text-xs font-bold text-red-100 mt-0.5">안전사고·고립 등 긴급 구조 필요 시 즉시 연결</div>
+              </div>
+              <span class="text-xl font-black">119</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 상시 노출 플로팅 긴급 도움 퀵 바 (하단 내비게이션 바로 위) -->
+    <div class="px-3.5 py-1.5 bg-red-50 border-t border-red-200 flex items-center justify-between shrink-0">
+      <span class="text-xs font-extrabold text-red-800">배터리 방전·경로 고립 시 즉시 도움</span>
+      <button type="button" onclick="switchTab('sos')"
+        class="px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-black shadow-sm active:scale-95 transition flex items-center gap-1">
+        <span>🆘</span><span>방전·긴급 도움 요청</span>
+      </button>
+    </div>
+
+    <!-- 하단 4탭 내비게이션 바 (엄지손가락 접근성 최적화) -->
+    <nav class="hc-nav bg-white border-t border-slate-200 grid grid-cols-4 shrink-0 z-30" aria-label="주요 메뉴 내비게이션">
+      <button type="button" data-tab="map" onclick="switchTab('map')"
+        class="nav-btn py-2.5 flex flex-col items-center justify-center gap-0.5 text-emerald-700 font-black border-t-[3px] border-emerald-600">
+        <span class="text-lg leading-none">🗺️</span>
+        <span class="text-xs">길찾기·지도</span>
+      </button>
+      <button type="button" data-tab="bus" onclick="switchTab('bus')"
+        class="nav-btn py-2.5 flex flex-col items-center justify-center gap-0.5 text-slate-500 font-bold border-t-[3px] border-transparent">
+        <span class="text-lg leading-none">🚌</span>
+        <span class="text-xs">저상버스</span>
+      </button>
+      <button type="button" data-tab="battery" onclick="switchTab('battery')"
+        class="nav-btn py-2.5 flex flex-col items-center justify-center gap-0.5 text-slate-500 font-bold border-t-[3px] border-transparent">
+        <span class="text-lg leading-none">🔋</span>
+        <span class="text-xs">배터리·충전</span>
+      </button>
+      <button type="button" data-tab="sos" onclick="switchTab('sos')"
+        class="nav-btn py-2.5 flex flex-col items-center justify-center gap-0.5 text-slate-500 font-bold border-t-[3px] border-transparent">
+        <span class="text-lg leading-none">🆘</span>
+        <span class="text-xs">긴급도움</span>
+      </button>
+    </nav>
+
+    <!-- 토스트 메시지 박스 (alert() 대체 접근성 알림창) -->
+    <div id="toastBox" role="status" aria-live="polite"
+      class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-extrabold opacity-0 translate-y-3 transition-all duration-300 z-50 flex items-center gap-2">
+      <span class="text-amber-400 text-base">🔔</span>
+      <span id="toastMessage">알림 메시지</span>
+    </div>
+
+    <!-- 시연용 긴급 연결 모달 (confirm/alert 대체) -->
+    <div id="sosModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="sosModalTitle">
+      <div class="hc-card bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border-2 border-slate-900 space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-black">시제품 연결 시연</span>
+          <button type="button" onclick="closeSosModal()" class="text-slate-500 hover:text-slate-900 font-black text-lg px-2">✕</button>
+        </div>
+        <h3 id="sosModalTitle" class="text-lg font-black">긴급 도움 요청 전송 준비</h3>
+        <p id="sosModalDesc" class="hc-text-muted text-sm font-medium text-slate-700 leading-relaxed"></p>
+        <div class="hc-subcard p-3 rounded-xl bg-slate-100 text-xs font-bold text-slate-800" id="sosModalPayload"></div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" onclick="closeSosModal()"
+            class="py-3 rounded-xl bg-slate-200 text-slate-800 font-extrabold text-sm">
+            취소
+          </button>
+          <button type="button" onclick="confirmSosSimulation()"
+            class="py-3 rounded-xl bg-red-600 text-white font-black text-sm shadow">
+            시연 전송 실행
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- JavaScript 인터랙티브 로직 (경로, 지도, 배터리, 버스, SOS) -->
+  <!-- ========================================================= -->
+  <script>
+    // 1. 기기별 제원 및 판단 기준 데이터 (PRD 기준)
+    const DEVICE_CONFIGS = {
+      electric_wc: {
+        name: '전동휠체어',
+        icon: '♿',
+        isElectric: true,
+        criteriaText: '♿ 전동휠체어 기준: 유효폭 1.2m↑ · 단차 2cm↓ · 경사 4.8°↓',
+        speedFactor: 1.0
+      },
+      manual_wc: {
+        name: '수동휠체어',
+        icon: '🧑‍🦽',
+        isElectric: false,
+        criteriaText: '🧑‍🦽 수동휠체어 기준: 급경사(4.8°↑) 및 자갈·단차 2cm↑ 엄격 회피',
+        speedFactor: 1.25 // 수동 주행 시 시간 할증
+      },
+      scooter: {
+        name: '전동스쿠터',
+        icon: '🛵',
+        isElectric: true,
+        criteriaText: '🛵 전동스쿠터 기준: 회전반경 확보(폭 1.4m↑ 권장) · 단차 2cm↓',
+        speedFactor: 0.9
+      },
+      stroller: {
+        name: '유모차·보행기',
+        icon: '🍼',
+        isElectric: false,
+        criteriaText: '🍼 유모차·보행기 기준: 계단·좁은 보도(0.8m↓)·단차 2cm↑ 회피',
+        speedFactor: 1.1
+      }
+    };
+
+    // 2. 마산 시범 구역 경로 프리셋 데이터 (PRD 색상 체계 준수)
+    const ROUTE_PRESETS = {
+      masan_univ: {
+        origin: '마산대학교 정문',
+        dest: '마산시외버스터미널',
+        easy: { dist: 1.8, wcTime: 24, walkTime: 27, carTime: 7, path: 'M 55,75 L 55,220 L 285,220 L 285,132 L 345,132' },
+        fast: { dist: 1.3, wcTime: 16, walkTime: 18, carTime: 5, path: 'M 55,75 L 165,75 L 165,132 L 345,132' },
+        startCoord: { x: 55, y: 75 },
+        endCoord: { x: 345, y: 132 },
+        markers: [
+          {
+            id: 'm1', type: 'danger', x: 118, y: 75,
+            title: '진입 불가: 합성옛길 보도 계단 및 높은 단차',
+            reason: '계단 8칸 + 연석 단차 9.5cm (기준 2cm 초과)',
+            spec: '유효폭 0.95m · 단차 9.5cm · 경사로 없음',
+            advice: '쉬운 길(3·15대로 평지 우회) 이용 시 계단 없이 통과 가능합니다.'
+          },
+          {
+            id: 'm2', type: 'danger', x: 165, y: 105,
+            title: '진입 불가: 전봇대·적치물 유효폭 협소 구간',
+            reason: '장애물 통과 유효폭 0.68m (기준 0.8m 미만)',
+            spec: '보도폭 1.1m · 전신주 간격 0.68m',
+            advice: '휠체어·유모차 통과 불가 구간으로 우회 경로가 자동 적용되었습니다.'
+          },
+          {
+            id: 'm3', type: 'caution', x: 165, y: 220,
+            title: '주의 구간: 마산역 방면 완만 경사로',
+            reason: '경사도 약 4.9° (기준 1/12 약 4.8° 근접)',
+            spec: '유효폭 1.8m · 단차 0cm · 경사 4.9°',
+            advice: '전동기기 주행 가능하나 수동휠체어는 보호자 동반 또는 속도 조절 권장.'
+          },
+          {
+            id: 'm4', type: 'unknown', x: 250, y: 75,
+            title: '정보 미확인 구간: 골목 이면도로',
+            reason: '최근 도로공사로 현장 데이터 미갱신 구간',
+            spec: '현장 조사 예정 구역',
+            advice: '확인된 안전한 대로변 보도를 우선 안내합니다.'
+          },
+          {
+            id: 'm5', type: 'charger', x: 285, y: 175,
+            title: '급속충전소: 합성동 지하상가 고객지원실',
+            reason: '동시 2대 급속충전 가능 · 휠체어 진입 단차 0cm',
+            spec: '운영 09:00~21:00 · ☎ 055-255-0011',
+            advice: '경유지 추가 시 경로에 즉시 반영됩니다.'
+          }
+        ]
+      },
+      masan_station: {
+        origin: '마산역 광장',
+        dest: '창원마산합포구청',
+        easy: { dist: 2.4, wcTime: 31, walkTime: 35, carTime: 9, path: 'M 85,165 L 55,165 L 55,220 L 210,220 L 210,255' },
+        fast: { dist: 1.9, wcTime: 23, walkTime: 26, carTime: 7, path: 'M 85,165 L 165,165 L 165,220 L 210,255' },
+        startCoord: { x: 85, y: 165 },
+        endCoord: { x: 210, y: 255 },
+        markers: [
+          {
+            id: 's1', type: 'danger', x: 165, y: 192,
+            title: '진입 불가: 지하보도 계단 구간',
+            reason: '승강기 미설치 계단 18칸 (우회 횡단보도 필요)',
+            spec: '계단 18칸 · 승강기 없음',
+            advice: '쉬운 길 선택 시 지상 횡단보도(음향신호기 설치)로 안전하게 우회합니다.'
+          },
+          {
+            id: 's2', type: 'caution', x: 130, y: 220,
+            title: '주의 구간: 상가 앞 보도 폭 1.15m 구간',
+            reason: '보도 유효폭 1.15m (법정 기준 1.2m 소폭 미달)',
+            spec: '유효폭 1.15m · 단차 1.5cm',
+            advice: '교행 시 주의가 필요하며 통행 자체는 가능합니다.'
+          },
+          {
+            id: 's3', type: 'charger', x: 210, y: 255,
+            title: '급속충전소: 마산합포구청 1층 민원실',
+            reason: '도착지 내부 무료 급속충전기 비치',
+            spec: '운영 09:00~18:00 · ☎ 055-220-4114',
+            advice: '도착 후 즉시 충전이 가능합니다.'
+          }
+        ]
+      },
+      kyungnam_univ: {
+        origin: '경남대학교 정문',
+        dest: '마산어시장 입구',
+        easy: { dist: 2.1, wcTime: 28, walkTime: 32, carTime: 8, path: 'M 65,255 L 165,255 L 165,220 L 285,220 L 315,245' },
+        fast: { dist: 1.6, wcTime: 20, walkTime: 22, carTime: 6, path: 'M 65,255 L 220,265 L 315,245' },
+        startCoord: { x: 65, y: 255 },
+        endCoord: { x: 315, y: 245 },
+        markers: [
+          {
+            id: 'k1', type: 'danger', x: 195, y: 262,
+            title: '진입 불가: 해안도로 배수로 단차 7cm',
+            reason: '보도-차도 경계 단차 7cm 및 노면 파손',
+            spec: '단차 7.0cm · 유효폭 1.0m',
+            advice: '쉬운 길(해안 산책로 데크 평지 우회) 이용을 권장합니다.'
+          },
+          {
+            id: 'k2', type: 'caution', x: 285, y: 220,
+            title: '주의 구간: 어시장 인근 혼잡 보행로',
+            reason: '유효폭 1.18m · 시간대별 상가 적치물 주의',
+            spec: '유효폭 1.18m · 단차 0cm',
+            advice: '오전 장보기 시간대에는 서행 주행을 권장합니다.'
+          },
+          {
+            id: 'k3', type: 'charger', x: 285, y: 175,
+            title: '급속충전소: 마산어시장 고객지원센터',
+            reason: '어시장 공영주차장 1층 엘리베이터 옆 위치',
+            spec: '운영 08:00~20:00 · ☎ 055-222-3344',
+            advice: '경유지 추가 시 경로에 포함됩니다.'
+          }
+        ]
+      }
+    };
+
+    // 3. 저상버스 시범 데이터 (TAGO + 창원 BIS 시연)
+    const BUS_STOPS = [
+      {
+        name: '합성동시외버스터미널',
+        buses: [
+          { num: '100번', type: '저상버스', isLowFloor: true, eta: '3분 후 도착', stopsLeft: '2정거장 전', status: '여유' },
+          { num: '160번', type: '저상버스', isLowFloor: true, eta: '8분 후 도착', stopsLeft: '5정거장 전', status: '보통' },
+          { num: '710번', type: '일반버스', isLowFloor: false, eta: '11분 후 도착', stopsLeft: '7정거장 전', status: '휠체어 탑승불가' },
+          { num: '250번', type: '저상버스', isLowFloor: true, eta: '17분 후 도착', stopsLeft: '11정거장 전', status: '여유' }
+        ]
+      },
+      {
+        name: '마산역 앞 정류장',
+        buses: [
+          { num: '103번', type: '저상버스', isLowFloor: true, eta: '곧 도착', stopsLeft: '전 정류장', status: '여유' },
+          { num: '703번', type: '일반버스', isLowFloor: false, eta: '5분 후 도착', stopsLeft: '3정거장 전', status: '휠체어 탑승불가' },
+          { num: '162번', type: '저상버스', isLowFloor: true, eta: '12분 후 도착', stopsLeft: '8정거장 전', status: '여유' }
+        ]
+      }
+    ];
+
+    // 4. 급속충전소 데이터 (전국전동휠체어급속충전기표준데이터)
+    const CHARGING_STATIONS = [
+      {
+        id: 'cs1',
+        name: '합성동 지하상가 관리사무소',
+        dist: '0.4 km',
+        hours: '09:00 ~ 21:00 (연중무휴)',
+        phone: '055-255-0011',
+        note: '동시 2대 충전 · 출입구 단차 0cm · 승강기 인접',
+        coord: { x: 285, y: 175 }
+      },
+      {
+        id: 'cs2',
+        name: '마산역 고객지원실 (1층 맞이방)',
+        dist: '0.9 km',
+        hours: '05:30 ~ 23:30',
+        phone: '055-299-7788',
+        note: '동시 2대 충전 · 장애인 화장실 바로 옆 위치',
+        coord: { x: 85, y: 165 }
+      },
+      {
+        id: 'cs3',
+        name: '창원마산합포구청 1층 민원실',
+        dist: '1.6 km',
+        hours: '09:00 ~ 18:00 (평일)',
+        phone: '055-220-4114',
+        note: '급속충전기 1대 · 공기주입기 겸용',
+        coord: { x: 210, y: 255 }
+      }
+    ];
+
+    // 전역 애플리케이션 상태
+    const state = {
+      activeTab: 'map',
+      device: 'electric_wc',
+      presetKey: 'masan_univ',
+      routeType: 'easy', // 'easy' | 'fast'
+      selectedMarkerId: 'm1',
+      waypointStation: null,
+      busStopIdx: 0,
+      batteryPercent: 65,
+      maxRangeKm: 25,
+      terrainFactor: 1.0,
+      highContrast: false,
+      pendingSosType: null
+    };
+
+    // 초기화 실행
+    window.onload = function () {
+      applyPresetRoute('masan_univ', true);
+      renderBusList();
+      renderChargingStations();
+      calculateBattery();
+    };
+
+    // 탭 전환 함수
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const isTarget = btn.getAttribute('data-tab') === tabName;
+        if (isTarget) {
+          btn.classList.remove('text-slate-500', 'font-bold', 'border-transparent');
+          btn.classList.add('text-emerald-700', 'font-black', 'border-emerald-600');
+        } else {
+          btn.classList.add('text-slate-500', 'font-bold', 'border-transparent');
+          btn.classList.remove('text-emerald-700', 'font-black', 'border-emerald-600');
+        }
+      });
+
+      document.getElementById('mainScrollArea').scrollTop = 0;
+    }
+
+    // 고대비 및 큰 글씨 모드 토글
+    function toggleAccessibilityMode() {
+      state.highContrast = !state.highContrast;
+      document.body.classList.toggle('high-contrast', state.highContrast);
+      document.documentElement.classList.toggle('large-text', state.highContrast);
+
+      const btn = document.getElementById('a11yToggleBtn');
+      const label = document.getElementById('a11yBtnLabel');
+      btn.setAttribute('aria-pressed', String(state.highContrast));
+
+      if (state.highContrast) {
+        btn.classList.remove('bg-slate-900', 'text-white', 'border-slate-900');
+        btn.classList.add('bg-amber-400', 'text-black', 'border-amber-300');
+        label.textContent = '기본화면 복귀';
+        showToast('고대비 및 큰 글씨 접근성 모드가 활성화되었습니다.');
+      } else {
+        btn.classList.add('bg-slate-900', 'text-white', 'border-slate-900');
+        btn.classList.remove('bg-amber-400', 'text-black', 'border-amber-300');
+        label.textContent = '고대비·큰글씨';
+        showToast('기본 화면 모드로 전환되었습니다.');
+      }
+    }
+
+    // 이동기기 선택 변경
+    function selectDevice(deviceKey) {
+      state.device = deviceKey;
+      const cfg = DEVICE_CONFIGS[deviceKey];
+
+      // 버튼 스타일 갱신
+      document.querySelectorAll('.device-btn').forEach(btn => {
+        const active = btn.getAttribute('data-device') === deviceKey;
+        if (active) {
+          btn.className = 'device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold border-2 transition flex items-center gap-1.5 bg-emerald-600 text-white border-emerald-700 shadow-sm';
+        } else {
+          btn.className = 'device-btn shrink-0 px-3 py-2 rounded-xl text-xs font-bold border-2 transition flex items-center gap-1.5 bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+        }
+      });
+
+      // 기준 배너 및 소요시간 비교 업데이트
+      document.getElementById('deviceCriteriaBanner').firstElementChild.textContent = cfg.criteriaText;
+      document.getElementById('compareDeviceIcon').textContent = cfg.icon;
+      document.getElementById('compareDeviceName').textContent = cfg.name;
+
+      // 비전동 기기 선택 시 배터리 탭 안내 토글
+      const notice = document.getElementById('nonElectricNotice');
+      if (cfg.isElectric) {
+        notice.classList.add('hidden');
+      } else {
+        notice.classList.remove('hidden');
+      }
+
+      updateRouteMetrics();
+      showToast(`${cfg.name} 맞춤 경로 기준으로 업데이트되었습니다.`);
+    }
+
+    // 마산 시범 구간 프리셋 적용
+    function applyPresetRoute(presetKey, silent = false) {
+      state.presetKey = presetKey;
+      state.waypointStation = null;
+      const preset = ROUTE_PRESETS[presetKey];
+
+      document.getElementById('originInput').value = preset.origin;
+      document.getElementById('destInput').value = preset.dest;
+
+      // 프리셋 칩 스타일 업데이트
+      document.querySelectorAll('.preset-chip').forEach((chip, idx) => {
+        const keys = ['masan_univ', 'masan_station', 'kyungnam_univ'];
+        if (keys[idx] === presetKey) {
+          chip.className = 'preset-chip shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-extrabold bg-emerald-600 text-white border border-emerald-700';
+        } else {
+          chip.className = 'preset-chip shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200';
+        }
+      });
+
+      // 첫 번째 진입불가 핀 기본 선택
+      state.selectedMarkerId = preset.markers[0].id;
+      updateRouteMetrics();
+      renderMap();
+      renderMarkerDetail(preset.markers[0]);
+
+      if (!silent) {
+        showToast(`'${preset.origin} → ${preset.dest}' 접근성 경로를 탐색했습니다.`);
+      }
+    }
+
+    // 출발지·도착지 스왑
+    function swapLocations() {
+      const originEl = document.getElementById('originInput');
+      const destEl = document.getElementById('destInput');
+      const temp = originEl.value;
+      originEl.value = destEl.value;
+      destEl.value = temp;
+      renderMap();
+      showToast('출발지와 도착지를 서로 바꿨습니다.');
+    }
+
+    // 사용자 직접 입력 검색 시뮬레이션
+    function searchCustomRoute() {
+      const origin = document.getElementById('originInput').value.trim();
+      const dest = document.getElementById('destInput').value.trim();
+      if (!origin || !dest) {
+        showToast('출발지와 도착지를 모두 입력해주세요.');
+        return;
+      }
+      renderMap();
+      showToast(`'${origin} → ${dest}' 접근성 경로 탐색 완료 (시범 지도 반영)`);
+    }
+
+    // 쉬운 길 vs 빠른 길 선택 토글
+    function selectRouteType(type) {
+      state.routeType = type;
+
+      const easyCard = document.getElementById('cardEasyRoute');
+      const fastCard = document.getElementById('cardFastRoute');
+
+      if (type === 'easy') {
+        easyCard.className = 'hc-card text-left p-3 rounded-2xl border-[3px] border-easy bg-white shadow-md transition relative overflow-hidden';
+        fastCard.className = 'hc-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-white/90 hover:bg-white shadow-sm transition relative overflow-hidden';
+        document.getElementById('activeRouteLabel').textContent = '쉬운 길 기준';
+        document.getElementById('mapSwitchRouteText').textContent = '빠른 길 비교하기';
+      } else {
+        fastCard.className = 'hc-card text-left p-3 rounded-2xl border-[3px] border-fast bg-white shadow-md transition relative overflow-hidden';
+        easyCard.className = 'hc-card text-left p-3 rounded-2xl border-2 border-slate-200 bg-white/90 hover:bg-white shadow-sm transition relative overflow-hidden';
+        document.getElementById('activeRouteLabel').textContent = '빠른 길 기준 (주의)';
+        document.getElementById('mapSwitchRouteText').textContent = '쉬운 길로 우회하기';
+      }
+
+      updateRouteMetrics();
+      renderMap();
+      calculateBattery();
+    }
+
+    // 거리 및 소요시간 수치 업데이트
+    function updateRouteMetrics() {
+      const preset = ROUTE_PRESETS[state.presetKey];
+      const devCfg = DEVICE_CONFIGS[state.device];
+      const waypointExtraDist = state.waypointStation ? 0.3 : 0;
+      const waypointExtraTime = state.waypointStation ? 4 : 0;
+
+      const easyDist = (preset.easy.dist + waypointExtraDist).toFixed(1);
+      const fastDist = (preset.fast.dist + waypointExtraDist).toFixed(1);
+
+      const easyWcTime = Math.round(preset.easy.wcTime * devCfg.speedFactor) + waypointExtraTime;
+      const fastWcTime = Math.round(preset.fast.wcTime * devCfg.speedFactor) + waypointExtraTime;
+
+      document.getElementById('easyTimeText').textContent = `${easyWcTime}분`;
+      document.getElementById('easyDistText').textContent = `${easyDist} km`;
+      document.getElementById('fastTimeText').textContent = `${fastWcTime}분`;
+      document.getElementById('fastDistText').textContent = `${fastDist} km`;
+
+      const dangerCount = preset.markers.filter(m => m.type === 'danger').length;
+      document.getElementById('fastWarningBadge').textContent = `진입불가 ${dangerCount}곳!`;
+
+      // 현재 선택된 경로 기준 비교 카드 수치 반영
+      const activeData = state.routeType === 'easy' ? preset.easy : preset.fast;
+      const activeDist = (activeData.dist + waypointExtraDist).toFixed(1);
+      const activeWcTime = state.routeType === 'easy' ? easyWcTime : fastWcTime;
+      const activeWalkTime = activeData.walkTime + waypointExtraTime;
+      const activeCarTime = activeData.carTime + (state.waypointStation ? 2 : 0);
+
+      document.getElementById('timeWheelchair').textContent = `${activeWcTime}분`;
+      document.getElementById('distWheelchair').textContent = `${activeDist} km`;
+      document.getElementById('timeWalk').textContent = `${activeWalkTime}분`;
+      document.getElementById('distWalk').textContent = `${activeDist} km`;
+      document.getElementById('timeCar').textContent = `${activeCarTime}분`;
+      document.getElementById('distCar').textContent = `${(parseFloat(activeDist) + 0.3).toFixed(1)} km`;
+
+      calculateBattery();
+    }
+
+    // SVG 지도 렌더링 (경로 폴리라인 + 진입불가/주의/미확인/충전소 마커)
+    function renderMap() {
+      const preset = ROUTE_PRESETS[state.presetKey];
+      const routesLayer = document.getElementById('mapRoutesLayer');
+      const markersLayer = document.getElementById('mapMarkersLayer');
+
+      const isEasy = state.routeType === 'easy';
+
+      // 두 경로를 모두 보여주되 선택된 경로를 굵고 선명하게 강조
+      let pathsHtml = `
+        <!-- 빠른 길 (파란색 #2563EB) -->
+        <path d="${preset.fast.path}" fill="none" stroke="#2563EB"
+          stroke-width="${isEasy ? '4' : '8'}"
+          stroke-opacity="${isEasy ? '0.45' : '0.95'}"
+          stroke-linecap="round" stroke-linejoin="round"
+          class="${!isEasy ? 'route-animated' : ''}" />
+
+        <!-- 쉬운 길 (초록색 #16A34A) -->
+        <path d="${preset.easy.path}" fill="none" stroke="#16A34A"
+          stroke-width="${isEasy ? '8' : '4'}"
+          stroke-opacity="${isEasy ? '0.95' : '0.45'}"
+          stroke-linecap="round" stroke-linejoin="round"
+          class="${isEasy ? 'route-animated' : ''}" />
+      `;
+
+      // 급속충전소 경유지가 추가된 경우 점선 연결 표시
+      if (state.waypointStation) {
+        const wp = state.waypointStation.coord;
+        pathsHtml += `
+          <circle cx="${wp.x}" cy="${wp.y}" r="16" fill="#16A34A" opacity="0.25" class="pin-pulse" />
+          <text x="${wp.x}" y="${wp.y - 16}" text-anchor="middle" fill="#15803D" font-size="10" font-weight="900">⚡충전경유</text>
+        `;
+      }
+
+      routesLayer.innerHTML = pathsHtml;
+
+      // 마커 렌더링 (진입불가 빨강, 주의 주황, 미확인 회색, 충전소 초록 + 출발/도착 핀)
+      let markersHtml = '';
+
+      preset.markers.forEach(m => {
+        const isSelected = state.selectedMarkerId === m.id;
+        let fill = '#DC2626';
+        let symbol = '✕';
+        if (m.type === 'caution') { fill = '#EA580C'; symbol = '!'; }
+        if (m.type === 'unknown') { fill = '#6B7280'; symbol = '?'; }
+        if (m.type === 'charger') { fill = '#16A34A'; symbol = '⚡'; }
+
+        markersHtml += `
+          <g class="cursor-pointer" onclick="handleMarkerClick('${m.id}')" role="button" tabindex="0" aria-label="${m.title}">
+            ${isSelected ? `<circle cx="${m.x}" cy="${m.y}" r="18" fill="${fill}" opacity="0.3" class="pin-pulse" />` : ''}
+            <circle cx="${m.x}" cy="${m.y}" r="${isSelected ? '13' : '10.5'}" fill="${fill}" stroke="#FFFFFF" stroke-width="2.5" />
+            <text x="${m.x}" y="${m.y + 4}" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="900">${symbol}</text>
+          </g>
+        `;
+      });
+
+      // 출발지 & 도착지 배지
+      const s = preset.startCoord;
+      const e = preset.endCoord;
+      markersHtml += `
+        <g>
+          <rect x="${s.x - 18}" y="${s.y - 24}" width="36" height="17" rx="6" fill="#16A34A" stroke="#FFFFFF" stroke-width="1.5" />
+          <text x="${s.x}" y="${s.y - 12}" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="900">출발</text>
+          <circle cx="${s.x}" cy="${s.y}" r="5" fill="#16A34A" stroke="#FFFFFF" stroke-width="2" />
+        </g>
+        <g>
+          <rect x="${e.x - 18}" y="${e.y - 24}" width="36" height="17" rx="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="1.5" />
+          <text x="${e.x}" y="${e.y - 12}" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="900">도착</text>
+          <circle cx="${e.x}" cy="${e.y}" r="5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2" />
+        </g>
+      `;
+
+      markersLayer.innerHTML = markersHtml;
+    }
+
+    // 지도 핀 클릭 이벤트
+    function handleMarkerClick(markerId) {
+      state.selectedMarkerId = markerId;
+      const preset = ROUTE_PRESETS[state.presetKey];
+      const marker = preset.markers.find(m => m.id === markerId);
+      if (marker) {
+        renderMap();
+        renderMarkerDetail(marker);
+      }
+    }
+
+    // 핀 상세 정보 패널 렌더링
+    function renderMarkerDetail(m) {
+      const card = document.getElementById('markerDetailCard');
+      let bgClass = 'bg-red-50 border-red-200 text-red-950';
+      let badgeClass = 'bg-danger text-white';
+      let badgeLabel = '⛔ 진입 불가';
+
+      if (m.type === 'caution') {
+        bgClass = 'bg-orange-50 border-orange-200 text-orange-950';
+        badgeClass = 'bg-caution text-white';
+        badgeLabel = '⚠️ 주의 구간';
+      } else if (m.type === 'unknown') {
+        bgClass = 'bg-slate-100 border-slate-300 text-slate-900';
+        badgeClass = 'bg-unknown text-white';
+        badgeLabel = '❓ 정보 미확인';
+      } else if (m.type === 'charger') {
+        bgClass = 'bg-emerald-50 border-emerald-200 text-emerald-950';
+        badgeClass = 'bg-easy text-white';
+        badgeLabel = '⚡ 급속충전소';
+      }
+
+      card.className = `p-3.5 border-t-2 transition-all ${bgClass}`;
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div class="space-y-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="px-2 py-0.5 rounded text-[11px] font-black ${badgeClass}">${badgeLabel}</span>
+              <span class="text-xs font-extrabold opacity-80">${m.spec}</span>
+            </div>
+            <h3 class="text-sm font-black leading-snug">${m.title}</h3>
+            <p class="text-xs font-bold opacity-90">${m.reason}</p>
+            <p class="text-[11px] font-bold pt-0.5 opacity-80">💡 ${m.advice}</p>
+          </div>
+          ${m.type === 'danger' && state.routeType === 'fast' ? `
+            <button type="button" onclick="selectRouteType('easy')"
+              class="shrink-0 px-2.5 py-2 rounded-xl bg-easy text-white text-xs font-black shadow active:scale-95">
+              우회 적용
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // 5. 저상버스 정류장 선택 및 도착 목록 렌더링
+    function selectBusStop(idx) {
+      state.busStopIdx = idx;
+      [0, 1].forEach(i => {
+        const btn = document.getElementById(`stopBtn${i}`);
+        if (i === idx) {
+          btn.className = 'p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50 text-left';
+          btn.firstElementChild.className = 'text-xs font-black text-blue-900';
+          btn.lastElementChild.className = 'text-[11px] font-bold text-blue-700';
+        } else {
+          btn.className = 'hc-subcard p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-left';
+          btn.firstElementChild.className = 'text-xs font-black text-slate-800';
+          btn.lastElementChild.className = 'text-[11px] font-bold text-slate-500';
+        }
+      });
+      renderBusList();
+    }
+
+    function renderBusList() {
+      const stop = BUS_STOPS[state.busStopIdx];
+      const container = document.getElementById('busArrivalList');
+
+      container.innerHTML = stop.buses.map(bus => `
+        <div class="hc-subcard p-3 rounded-xl border ${bus.isLowFloor ? 'border-emerald-300 bg-emerald-50/60' : 'border-slate-200 bg-slate-50'} flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="px-2.5 py-1.5 rounded-xl font-black text-sm ${bus.isLowFloor ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-white'}">
+              ${bus.num}
+            </span>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-black px-2 py-0.5 rounded ${bus.isLowFloor ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}">
+                  ${bus.type}
+                </span>
+                <span class="text-[11px] font-bold text-slate-500">${bus.status}</span>
+              </div>
+              <div class="text-xs font-bold text-slate-600 mt-1">${bus.stopsLeft}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-black ${bus.isLowFloor ? 'text-blue-700' : 'text-slate-700'}">${bus.eta}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function refreshBusTimes() {
+      renderBusList();
+      showToast('TAGO 및 창원시 버스도착정보를 최신화했습니다.');
+    }
+
+    // 6. 배터리 주행거리 계산기 (PRD 공식 정확 반영)
+    // 계산식: 완충 주행거리 × (잔량/100) × 환경계수 × 0.85
+    function syncBatteryInput(val) {
+      let num = parseInt(val, 10);
+      if (isNaN(num)) num = 1;
+      num = Math.max(1, Math.min(100, num));
+      state.batteryPercent = num;
+      document.getElementById('batterySlider').value = num;
+      document.getElementById('batteryNumInput').value = num;
+      calculateBattery();
+    }
+
+    function setTerrainFactor(factor) {
+      state.terrainFactor = factor;
+      const flatBtn = document.getElementById('terrainFlatBtn');
+      const slopeBtn = document.getElementById('terrainSlopeBtn');
+      if (factor === 1.0) {
+        flatBtn.className = 'py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white shadow-sm';
+        slopeBtn.className = 'py-1.5 rounded-lg text-xs font-bold text-slate-700';
+      } else {
+        slopeBtn.className = 'py-1.5 rounded-lg text-xs font-black bg-amber-600 text-white shadow-sm';
+        flatBtn.className = 'py-1.5 rounded-lg text-xs font-bold text-slate-700';
+      }
+      calculateBattery();
+    }
+
+    function calculateBattery() {
+      const maxRange = parseFloat(document.getElementById('maxRangeInput').value) || 25;
+      state.maxRangeKm = maxRange;
+
+      const estimatedKm = maxRange * (state.batteryPercent / 100) * state.terrainFactor * 0.85;
+      const formattedKm = estimatedKm.toFixed(1);
+
+      // 현재 선택된 경로 거리 가져오기
+      const preset = ROUTE_PRESETS[state.presetKey];
+      const baseDist = state.routeType === 'easy' ? preset.easy.dist : preset.fast.dist;
+      const routeDist = baseDist + (state.waypointStation ? 0.3 : 0);
+
+      document.getElementById('batRouteDist').textContent = routeDist.toFixed(1);
+      document.getElementById('estimatedRangeText').textContent = `${formattedKm} km`;
+      document.getElementById('batteryFormulaBreakdown').textContent =
+        `계산식: ${maxRange}km × (${state.batteryPercent}%/100) × ${state.terrainFactor.toFixed(1)}(${state.terrainFactor === 1.0 ? '평지' : '경사'}) × 0.85 = ${estimatedKm.toFixed(2)}km`;
+
+      const statusBox = document.getElementById('batteryStatusBox');
+      const reachBadge = document.getElementById('batReachBadge');
+
+      if (estimatedKm >= routeDist * 2) {
+        statusBox.className = 'p-3.5 rounded-2xl bg-emerald-600 text-white shadow-sm';
+        reachBadge.className = 'px-2.5 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black';
+        reachBadge.textContent = '목적지 왕복 가능 ✓';
+      } else if (estimatedKm >= routeDist) {
+        statusBox.className = 'p-3.5 rounded-2xl bg-amber-500 text-slate-950 shadow-sm';
+        reachBadge.className = 'px-2.5 py-0.5 rounded-full bg-slate-900 text-amber-300 text-xs font-black';
+        reachBadge.textContent = '편도 가능 / 충전 권장';
+      } else {
+        statusBox.className = 'p-3.5 rounded-2xl bg-red-600 text-white shadow-sm';
+        reachBadge.className = 'px-2.5 py-0.5 rounded-full bg-white text-red-700 text-xs font-black';
+        reachBadge.textContent = '배터리 부족 / 충전소 경유 필수';
+      }
+    }
+
+    // 7. 급속충전소 리스트 및 경유지 추가
+    function renderChargingStations() {
+      const list = document.getElementById('chargingStationList');
+      list.innerHTML = CHARGING_STATIONS.map(st => {
+        const isAdded = state.waypointStation && state.waypointStation.id === st.id;
+        return `
+          <div class="hc-subcard p-3 rounded-xl border ${isAdded ? 'border-emerald-600 bg-emerald-50' : 'border-slate-200 bg-slate-50'} space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-black">${st.name}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[11px] font-extrabold">${st.dist}</span>
+                </div>
+                <p class="text-xs font-bold text-slate-600 mt-0.5">🕒 ${st.hours} · ☎ ${st.phone}</p>
+                <p class="text-[11px] font-bold text-emerald-800 mt-0.5">✓ ${st.note}</p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" onclick="addChargingWaypoint('${st.id}')"
+                class="flex-1 py-2 rounded-xl text-xs font-black transition ${isAdded ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'}">
+                ${isAdded ? '✓ 경유지 설정됨 (지도 보기)' : '+ 충전소 경유지 추가'}
+              </button>
+              <button type="button" onclick="showToast('${st.name}(${st.phone}) 전화 연결 시연')"
+                class="px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-extrabold">
+                📞 문의
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addChargingWaypoint(stationId) {
+      const station = CHARGING_STATIONS.find(s => s.id === stationId);
+      if (!station) return;
+      state.waypointStation = station;
+      renderChargingStations();
+      updateRouteMetrics();
+      renderMap();
+      switchTab('map');
+      showToast(`'${station.name}'이(가) 경로 경유지로 추가되었습니다.`);
+    }
+
+    // 8. 방전 및 긴급 도움 요청 (P3)
+    function refreshGpsLocation() {
+      const addresses = [
+        { addr: '경상남도 창원시 마산회원구 합성남로 12 (합성동 시외버스터미널 인근)', coord: '위도 35.2384 · 경도 128.5812' },
+        { addr: '경상남도 창원시 마산회원구 마산역광장로 18 (마산역 1번 출구 앞)', coord: '위도 35.2359 · 경도 128.5768' },
+        { addr: '경상남도 창원시 마산합포구 3·15대로 210 (마산합포구청 정문 앞)', coord: '위도 35.1972 · 경도 128.5701' }
+      ];
+      const pick = addresses[Math.floor(Math.random() * addresses.length)];
+      document.getElementById('currentGpsAddress').textContent = pick.addr;
+      document.getElementById('gpsCoordsText').textContent = pick.coord;
+      showToast('현재 GPS 위치 및 도로명 주소가 갱신되었습니다.');
+    }
+
+    function copyCurrentAddress() {
+      const addr = document.getElementById('currentGpsAddress').textContent.trim();
+      const tempInput = document.createElement('textarea');
+      tempInput.value = addr;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('현재 위치 주소가 클립보드에 복사되었습니다.');
+      } catch (e) {
+        showToast('주소 복사: ' + addr);
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function triggerEmergencyAction(type) {
+      state.pendingSosType = type;
+      const addr = document.getElementById('currentGpsAddress').textContent.trim();
+      const deviceName = DEVICE_CONFIGS[state.device].name;
+      const modal = document.getElementById('sosModal');
+      const title = document.getElementById('sosModalTitle');
+      const desc = document.getElementById('sosModalDesc');
+      const payload = document.getElementById('sosModalPayload');
+
+      if (type === 'guardian') {
+        title.textContent = '📩 보호자 긴급 문자 전송 시연';
+        desc.textContent = '등록된 보호자 연락처로 현재 GPS 위치와 이동기기 배터리 방전 도움 요청 문자를 전송합니다.';
+        payload.textContent = `[턱없이 긴급알림] ${deviceName} 이동 중 배터리 방전/도움이 필요합니다. 현재 위치: ${addr} (잔량 ${state.batteryPercent}%)`;
+      } else if (type === 'nubicall') {
+        title.textContent = '🚐 창원 누비콜 · 이동지원센터 연결';
+        desc.textContent = '창원시설공단 교통약자 특별교통수단(누비콜 1588-9222) 상담원에게 현재 위치 정보를 전달하고 연결합니다.';
+        payload.textContent = `연결 번호: 1588-9222 · 탑승 위치: ${addr}`;
+      } else {
+        title.textContent = '🚨 119 위급 상황 신고 연결';
+        desc.textContent = '도로 고립 또는 안전사고 발생 시 119 긴급신고센터로 즉시 전화를 연결합니다.';
+        payload.textContent = `긴급 신고 번호: 119 · 신고자 위치: ${addr}`;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeSosModal() {
+      document.getElementById('sosModal').classList.add('hidden');
+    }
+
+    function confirmSosSimulation() {
+      closeSosModal();
+      const msgs = {
+        guardian: '보호자에게 현재 위치가 포함된 긴급 문자가 전송되었습니다. (시연 완료)',
+        nubicall: '창원 누비콜(1588-9222) 콜센터 연결 및 위치 전송을 시연했습니다.',
+        '119': '119 긴급신고 연결 화면을 호출했습니다. (시연 완료)'
+      };
+      showToast(msgs[state.pendingSosType] || '도움 요청이 완료되었습니다.');
+    }
+
+    // 공통 토스트 알림 함수
+    let toastTimer = null;
+    function showToast(message) {
+      const box = document.getElementById('toastBox');
+      const text = document.getElementById('toastMessage');
+      text.textContent = message;
+      box.classList.remove('opacity-0', 'translate-y-3');
+      box.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        box.classList.add('opacity-0', 'translate-y-3');
+        box.classList.remove('opacity-100', 'translate-y-0');
+      }, 3200);
+    }
+  </script>
+</body>
+</html>
