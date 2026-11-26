@@ -2,9 +2,13 @@
 
 이동약자들을 위한 간편 길찾기 웹사이트입니다. 현재 `index.html`은 마산 시범 구간의 시연용 도식 지도와 정적 예시 데이터를 사용하는 프로토타입입니다. 실제 지도 적용과 경로·버스·충전소 API 연동은 시연 이후 추후 진행할 계획입니다.
 
+웹사이트: https://seoajeong98.github.io/-/
+
+이전 버전은 `previous/index.html`에 보존되어 있습니다.
+
 ## 테스트
 
-Node.js가 설치되어 있다면 저장소 루트에서 아래 명령으로 배터리 경계값, 시범 경로 차단, 위치 권한 처리, 도움 요청 문구의 회귀 테스트를 실행합니다.
+Node.js가 설치되어 있다면 저장소 루트에서 아래 명령으로 이전 버전의 배터리 경계값, 시범 경로 차단, 위치 권한 처리, 도움 요청 문구의 회귀 테스트를 실행합니다. 현재 기본 웹사이트는 이 테스트에 포함되지 않습니다.
 
 ```sh
 node --test tests/prototype.test.cjs
@@ -14,4 +18,4 @@ node --test tests/prototype.test.cjs
 
 ## 배포
 
-`main` 브랜치에 변경 사항을 푸시하면 GitHub Actions가 GitHub Pages를 활성화하고 자동 배포합니다. 첫 배포가 완료되면 Pages URL은 저장소의 **Settings → Pages**와 Actions 실행 결과에서 확인할 수 있습니다.
+GitHub Pages는 `main` 브랜치의 루트에서 배포하도록 설정되어 있습니다. 배포 상태는 저장소의 **Settings → Pages**와 Actions 실행 결과에서 확인할 수 있습니다.

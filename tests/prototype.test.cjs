@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'previous', 'index.html'), 'utf8');
 const script = html.match(/<script>\s*(\/\/ 1\. 기기별 제원[\s\S]*?)<\/script>/);
 assert.ok(script, 'prototype application script should exist');
 
