@@ -4,4 +4,4 @@
 
 ## 배포
 
-`main` 브랜치에 변경 사항을 푸시하면 GitHub Actions가 GitHub Pages에 자동 배포합니다. 저장소의 **Settings → Pages**에서 배포 출처를 **GitHub Actions**로 설정해야 합니다. 첫 배포가 완료되면 Pages URL은 저장소의 **Settings → Pages**와 Actions 실행 결과에서 확인할 수 있습니다.
+`main` 브랜치에 변경 사항을 푸시하면 GitHub Actions가 GitHub Pages를 활성화하고 자동 배포합니다. 첫 배포가 완료되면 Pages URL은 저장소의 **Settings → Pages**와 Actions 실행 결과에서 확인할 수 있습니다.
