@@ -8,6 +8,7 @@ const state = {
   origin: 'masan_univ',
   destination: 'naeseo_center',
   selectedRouteMode: 'easy', // 'easy' | 'fast'
+  excludeUnknown: false,
   simulateMapError: false,   // TRD 1.4 지도 SDK 로드 실패 시뮬레이션
   includeCarApi: true,
   currentRouteResult: null,

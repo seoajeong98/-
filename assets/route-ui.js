@@ -37,7 +37,7 @@ function getStatusStyle(status) {
 // Tab 1: 경로 결과 렌더링
 function renderRouteResult() {
   const container = document.getElementById('route-result-container');
-  const res = evaluateRoutes(state.origin, state.destination, state.device);
+  const res = evaluateRoutes(state.origin, state.destination, state.device, state.excludeUnknown);
   state.currentRouteResult = res;
 
   // 다른 탭(시간비교, 배터리)도 최신 경로 기준으로 동기화
@@ -74,7 +74,7 @@ function renderRouteResult() {
     const strokeColor = seg.status === 'passable'
       ? (state.selectedRouteMode === 'fast' ? '#2563eb' : '#16a34a')
       : st.color;
-    const dashAttr = seg.status === 'unknown' ? 'stroke-dasharray="6 6"' : '';
+    const dashAttr = !['passable', 'caution', 'blocked'].includes(seg.status) ? 'stroke-dasharray="6 6"' : '';
     return `
       <polyline
         points="${seg.points}"
@@ -132,6 +132,7 @@ function renderRouteResult() {
         <button
           type="button"
           onclick="selectRouteMode('easy')"
+          aria-pressed="${state.selectedRouteMode === 'easy'}"
           class="text-left p-4 rounded-2xl border-2 transition ${
             state.selectedRouteMode === 'easy'
               ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-200'
@@ -159,6 +160,7 @@ function renderRouteResult() {
         <button
           type="button"
           onclick="selectRouteMode('fast')"
+          aria-pressed="${state.selectedRouteMode === 'fast'}"
           class="text-left p-4 rounded-2xl border-2 transition ${
             state.selectedRouteMode === 'fast'
               ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-200'
@@ -291,6 +293,11 @@ function renderRouteResult() {
               </p>
             </div>
             <span class="text-xs font-bold text-rose-700 shrink-0">자동 우회 처리됨</span>
+          </div>
+        `).join('')}
+        ${res.excludedUnknownCandidates.map((ex) => `
+          <div class="p-3.5 rounded-xl border-2 border-slate-300 bg-slate-50 text-sm text-slate-800">
+            <strong>미확인 구간으로 제외:</strong> ${ex.name} (미확인 ${ex.unknownLengthM}m)
           </div>
         `).join('')}
       </div>

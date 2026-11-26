@@ -39,23 +39,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('toast-box').classList.add('hidden');
   });
 
-  // 탭 전환
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.tab;
-      state.activeTab = target;
-
-      document.querySelectorAll('.tab-btn').forEach((b) => {
-        const isActive = b.dataset.tab === target;
-        b.setAttribute('aria-selected', String(isActive));
-        b.className = isActive
-          ? 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-emerald-600 text-white shadow-sm transition'
-          : 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
-      });
-
-      ['route', 'transport', 'battery', 'help'].forEach((panelId) => {
-        document.getElementById(`panel-${panelId}`).classList.toggle('hidden', panelId !== target);
-      });
+  const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+  function activateTab(tab, focus = false) {
+    const target = tab.dataset.tab;
+    state.activeTab = target;
+    tabs.forEach((b) => {
+      const isActive = b === tab;
+      b.setAttribute('aria-selected', String(isActive));
+      b.tabIndex = isActive ? 0 : -1;
+      b.className = isActive
+        ? 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-emerald-600 text-white shadow-sm transition'
+        : 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+      document.getElementById(`panel-${b.dataset.tab}`).classList.toggle('hidden', !isActive);
+    });
+    if (focus) tab.focus();
+  }
+  tabs.forEach((btn, index) => {
+    btn.addEventListener('click', () => activateTab(btn));
+    btn.addEventListener('keydown', (event) => {
+      let next;
+      if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = tabs.length - 1;
+      else return;
+      event.preventDefault();
+      activateTab(tabs[next], true);
     });
   });
 
@@ -65,12 +74,18 @@ document.addEventListener('DOMContentLoaded', () => {
       state.device = btn.dataset.device;
       document.querySelectorAll('.device-btn').forEach((b) => {
         const selected = b.dataset.device === state.device;
+        b.setAttribute('aria-pressed', String(selected));
         b.className = selected
           ? 'device-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 text-left transition'
           : 'device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition';
       });
       renderRouteResult();
     });
+  });
+
+  document.getElementById('exclude-unknown').addEventListener('change', (event) => {
+    state.excludeUnknown = event.target.checked;
+    renderRouteResult();
   });
 
   // 출발지·도착지 바꾸기

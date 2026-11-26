@@ -15,9 +15,10 @@ function calcDurationMinutes(distanceM, speedKmh) {
  * @param {string} originId 시연 출발지 ID
  * @param {string} destId 시연 도착지 ID
  * @param {string} deviceId 이동기기 ID
- * @returns {object} 성공 시 status=OK와 easy·fast·excludedCandidates, 실패 시 status와 message
+ * @param {boolean} excludeUnknown 미확인 구간이 있는 후보 제외 여부
+ * @returns {object} 성공 시 status=OK와 easy·fast·제외 후보 목록, 실패 시 status와 message
  */
-function evaluateRoutes(originId, destId, deviceId) {
+function evaluateRoutes(originId, destId, deviceId, excludeUnknown = false) {
   if (!Object.hasOwn(PLACES, originId) || !Object.hasOwn(PLACES, destId) || !Object.hasOwn(DEVICES, deviceId)) {
     return { status: 'INVALID_INPUT', message: '출발지, 도착지와 이동기기를 다시 선택해 주세요.' };
   }
@@ -41,9 +42,11 @@ function evaluateRoutes(originId, destId, deviceId) {
   const device = DEVICES[deviceId];
   const validCandidates = [];
   const excludedCandidates = [];
+  const excludedUnknownCandidates = [];
 
   scenario.candidates.forEach((cand) => {
     const hasBlocked = cand.segments.some((s) => s.status === 'blocked');
+    const hasUnknown = cand.segments.some((s) => !['passable', 'caution', 'blocked'].includes(s.status));
     let distanceM = 0;
     let cautionLengthM = 0;
     let unknownLengthM = 0;
@@ -51,7 +54,7 @@ function evaluateRoutes(originId, destId, deviceId) {
     cand.segments.forEach((s) => {
       distanceM += s.lengthM;
       if (s.status === 'caution') cautionLengthM += s.lengthM;
-      if (s.status === 'unknown') unknownLengthM += s.lengthM;
+      if (!['passable', 'caution', 'blocked'].includes(s.status)) unknownLengthM += s.lengthM;
     });
 
     const enriched = {
@@ -65,12 +68,21 @@ function evaluateRoutes(originId, destId, deviceId) {
 
     if (hasBlocked) {
       excludedCandidates.push(enriched);
+    } else if (excludeUnknown && hasUnknown) {
+      excludedUnknownCandidates.push(enriched);
     } else {
       validCandidates.push(enriched);
     }
   });
 
   if (validCandidates.length === 0) {
+    if (excludedUnknownCandidates.length > 0) {
+      return {
+        status: 'NO_KNOWN_ROUTE',
+        message: '진입 불가 및 미확인 구간을 제외하면 선택할 수 있는 시연 경로가 없습니다.',
+        obstacles: scenario.areaBlockedSegments
+      };
+    }
     return {
       status: 'NO_VERIFIED_ROUTE',
       message: '모든 후보 경로에 진입 불가(계단·단차 등) 구간이 포함되어 추천 가능한 경로가 없습니다.',
@@ -105,7 +117,8 @@ function evaluateRoutes(originId, destId, deviceId) {
     easy,
     fast,
     sameRoute,
-    excludedCandidates
+    excludedCandidates,
+    excludedUnknownCandidates
   };
 }
 

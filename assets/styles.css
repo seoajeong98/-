@@ -68,4 +68,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   to {
     stroke-dashoffset: -200;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .route-dash {
+      animation: none;
+    }
+  }
 }

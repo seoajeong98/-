@@ -65,6 +65,31 @@ test('가상 시연 구간 C는 양방향에서 계단을 제외하고 별도의
   assert.equal(reverse.easy.segments[0].points, '510,150 380,210');
 });
 
+test('미확인 구간 제외 선택은 기존 기본값을 유지하며 해당 경로만 제외한다', () => {
+  const ctx = loadScripts(['data.js', 'logic.js']);
+  const defaultResult = ctx.evaluateRoutes('masan_univ', 'naeseo_center', 'power_wheelchair');
+  const filtered = ctx.evaluateRoutes('masan_univ', 'naeseo_center', 'power_wheelchair', true);
+  assert.equal(defaultResult.fast.id, 'ROUTE-A-2');
+  assert.equal(filtered.fast.id, 'ROUTE-A-1');
+  assert.equal(filtered.easy.id, 'ROUTE-A-1');
+  assert.equal(filtered.excludedUnknownCandidates[0].id, 'ROUTE-A-2');
+  assert.equal(filtered.excludedCandidates[0].id, 'ROUTE-A-3-BLOCKED');
+});
+
+test('미확인 구간만 남으면 경로를 만들지 않으며 알 수 없는 상태도 미확인으로 취급한다', () => {
+  const ctx = loadScripts(['data.js', 'logic.js']);
+  vm.runInContext(`
+    const scenario = DEMO_SCENARIOS['masan_univ__naeseo_center'];
+    scenario.candidates = [scenario.candidates[1]];
+    scenario.candidates[0].segments[1].status = 'new-unknown-status';
+  `, ctx);
+  const unfiltered = ctx.evaluateRoutes('masan_univ', 'naeseo_center', 'power_wheelchair');
+  assert.equal(unfiltered.fast.unknownLengthM, 260);
+  const filtered = ctx.evaluateRoutes('masan_univ', 'naeseo_center', 'power_wheelchair', true);
+  assert.equal(filtered.status, 'NO_KNOWN_ROUTE');
+  assert.match(filtered.message, /미확인 구간을 제외/);
+});
+
 test('동일 장소, 범위 밖, 알 수 없는 입력에 실제 경로를 만들어내지 않는다', () => {
   const ctx = loadScripts(['data.js', 'logic.js']);
   assert.equal(ctx.evaluateRoutes('masan_univ', 'masan_univ', 'stroller').status, 'INVALID_INPUT');
@@ -183,4 +208,58 @@ test('위치 조회는 버튼 클릭 후에만 요청하며 거부되면 위치�
   assert.equal(requests, 1);
   assert.equal(vm.runInContext('state.location', ctx), null);
   assert.match(latestError, /거부|실패/);
+});
+
+test('탭은 키보드 방향키와 Home·End로 이동하고 선택 상태를 갱신한다', () => {
+  const elements = new Map();
+  const documentHandlers = {};
+  const document = {
+    documentElement: { dataset: {}, classList: { toggle() {} } },
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, {
+        value: '', textContent: '', hidden: false, handlers: {}, attributes: {},
+        classList: {
+          values: new Set(),
+          add(name) { this.values.add(name); },
+          remove(name) { this.values.delete(name); },
+          toggle(name, force) { if (force) this.values.add(name); else this.values.delete(name); },
+          contains(name) { return this.values.has(name); }
+        },
+        setAttribute(name, value) { this.attributes[name] = value; },
+        addEventListener(event, handler) { this.handlers[event] = handler; }
+      });
+      return elements.get(id);
+    },
+    querySelectorAll(selector) { return selector === '.tab-btn' ? tabs : []; },
+    addEventListener(event, handler) { documentHandlers[event] = handler; }
+  };
+  const tabs = ['route', 'transport', 'battery', 'help'].map((name) => {
+    const tab = document.getElementById(`tab-${name}`);
+    tab.dataset = { tab: name };
+    tab.focus = () => { document.activeElement = tab; };
+    return tab;
+  });
+  loadScripts(['state.js', 'app.js'], {
+    document, navigator: { onLine: true }, window: { addEventListener() {} },
+    showToast() {}, updateLocationDisplay() {}, renderRouteResult() {},
+    renderTransportComparison() {}, renderBatterySection() {}, renderBusArrivals() {},
+    renderChargers() {}, updateHelpSmsPreview() {}
+  });
+  documentHandlers.DOMContentLoaded();
+  let prevented = false;
+  tabs[0].handlers.keydown({ key: 'ArrowRight', preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(document.activeElement, tabs[1]);
+  assert.equal(tabs[0].attributes['aria-selected'], 'false');
+  assert.equal(tabs[1].attributes['aria-selected'], 'true');
+  assert.equal(tabs[0].tabIndex, -1);
+  assert.equal(tabs[1].tabIndex, 0);
+  assert.equal(document.getElementById('panel-route').classList.contains('hidden'), true);
+  assert.equal(document.getElementById('panel-transport').classList.contains('hidden'), false);
+  tabs[1].handlers.keydown({ key: 'End', preventDefault() {} });
+  assert.equal(document.activeElement, tabs[3]);
+  tabs[3].handlers.keydown({ key: 'Home', preventDefault() {} });
+  assert.equal(document.activeElement, tabs[0]);
+  tabs[0].handlers.keydown({ key: 'ArrowLeft', preventDefault() {} });
+  assert.equal(document.activeElement, tabs[3]);
 });

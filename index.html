@@ -87,7 +87,10 @@
         <button
           type="button"
           role="tab"
+          id="tab-route"
+          aria-controls="panel-route"
           aria-selected="true"
+          tabindex="0"
           data-tab="route"
           class="tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-emerald-600 text-white shadow-sm transition"
         >
@@ -97,7 +100,10 @@
         <button
           type="button"
           role="tab"
+          id="tab-transport"
+          aria-controls="panel-transport"
           aria-selected="false"
+          tabindex="-1"
           data-tab="transport"
           class="tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
         >
@@ -107,7 +113,10 @@
         <button
           type="button"
           role="tab"
+          id="tab-battery"
+          aria-controls="panel-battery"
           aria-selected="false"
+          tabindex="-1"
           data-tab="battery"
           class="tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
         >
@@ -117,7 +126,10 @@
         <button
           type="button"
           role="tab"
+          id="tab-help"
+          aria-controls="panel-help"
           aria-selected="false"
+          tabindex="-1"
           data-tab="help"
           class="tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
         >
@@ -144,7 +156,7 @@
     <!-- ===================================================================== -->
     <!-- TAB 1: 휠체어·이동약자 맞춤 간편 길찾기 (P1 핵심)                     -->
     <!-- ===================================================================== -->
-    <section id="panel-route" role="tabpanel" class="space-y-5">
+    <section id="panel-route" role="tabpanel" aria-labelledby="tab-route" tabindex="0" class="space-y-5">
       <!-- 입력 카드: 이동기기 & 마산 시범 출발지·도착지 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -165,19 +177,19 @@
             ① 이동기기 선택 (시연 속도 가정 표시)
           </label>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="device-selector">
-            <button type="button" data-device="power_wheelchair" class="device-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 text-left transition">
+            <button type="button" data-device="power_wheelchair" aria-pressed="true" class="device-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 text-left transition">
               <div class="font-extrabold text-sm sm:text-base">🦽 전동휠체어</div>
               <div class="text-xs text-emerald-800 font-semibold mt-0.5">시연 속도 4.0 km/h</div>
             </button>
-            <button type="button" data-device="scooter" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
+            <button type="button" data-device="scooter" aria-pressed="false" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
               <div class="font-extrabold text-sm sm:text-base">🛵 전동스쿠터</div>
               <div class="text-xs text-slate-500 font-semibold mt-0.5">시연 속도 4.0 km/h</div>
             </button>
-            <button type="button" data-device="manual_wheelchair" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
+            <button type="button" data-device="manual_wheelchair" aria-pressed="false" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
               <div class="font-extrabold text-sm sm:text-base">🧑‍🦽 수동휠체어</div>
               <div class="text-xs text-slate-500 font-semibold mt-0.5">시연 속도 3.0 km/h</div>
             </button>
-            <button type="button" data-device="stroller" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
+            <button type="button" data-device="stroller" aria-pressed="false" class="device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition">
               <div class="font-extrabold text-sm sm:text-base">👶 유모차</div>
               <div class="text-xs text-slate-500 font-semibold mt-0.5">시연 속도 3.0 km/h</div>
             </button>
@@ -230,6 +242,14 @@
           </div>
         </div>
 
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+          <label for="exclude-unknown" class="inline-flex items-center gap-2 font-bold text-sm text-slate-800">
+            <input id="exclude-unknown" type="checkbox" class="w-5 h-5 accent-emerald-600" />
+            미확인 구간이 포함된 시연 경로 제외
+          </label>
+          <p class="text-xs text-slate-600 mt-1">제외 후 후보가 없을 수 있습니다. 남은 경로도 실제 안전을 보장하지 않습니다.</p>
+        </div>
+
         <!-- 빠른 시범 시나리오 프리셋 & 실행 버튼 -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
@@ -266,7 +286,7 @@
     <!-- ===================================================================== -->
     <!-- TAB 2: 이동시간 비교 및 저상버스 안내 (P1 부분)                        -->
     <!-- ===================================================================== -->
-    <section id="panel-transport" role="tabpanel" class="hidden space-y-5">
+    <section id="panel-transport" role="tabpanel" aria-labelledby="tab-transport" tabindex="0" class="hidden space-y-5">
       <!-- 이동수단별 소요시간 비교 카드 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -338,7 +358,7 @@
     <!-- ===================================================================== -->
     <!-- TAB 3: 배터리 주행거리 추정 및 급속충전소 안내 (P2 시연)                 -->
     <!-- ===================================================================== -->
-    <section id="panel-battery" role="tabpanel" class="hidden space-y-5">
+    <section id="panel-battery" role="tabpanel" aria-labelledby="tab-battery" tabindex="0" class="hidden space-y-5">
       <!-- 배터리 예상 주행거리 계산기 -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -444,7 +464,7 @@
     <!-- ===================================================================== -->
     <!-- TAB 4: 방전 시 위치 기반 도움 요청 (P3 시연)                           -->
     <!-- ===================================================================== -->
-    <section id="panel-help" role="tabpanel" class="hidden space-y-5">
+    <section id="panel-help" role="tabpanel" aria-labelledby="tab-help" tabindex="0" class="hidden space-y-5">
       <!-- 안전 원칙 안내 배너 -->
       <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 space-y-1.5">
         <div class="flex items-center gap-2 font-black text-base">
