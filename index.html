@@ -5,46 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>턱없이 - 마산 이동약자 간편 길찾기</title>
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com" onerror="document.documentElement.dataset.styleUnavailable='true'"></script>
   <!-- Google Fonts: Noto Sans KR & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Noto Sans KR', 'Inter', sans-serif;
-      background-color: #f8fafc;
-      color: #0f172a;
-      word-break: keep-all;
-    }
-    /* 큰 글씨 모드 스타일 */
-    html.large-text {
-      font-size: 19px;
-    }
-    html.large-text .text-xs {
-      font-size: 0.85rem;
-    }
-    html.large-text .text-sm {
-      font-size: 1rem;
-    }
-    /* 접근성 포커스 링 강화 */
-    button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
-      outline: 3px solid #2563eb;
-      outline-offset: 2px;
-    }
-    /* SVG 지도 애니메이션 */
-    .route-dash {
-      stroke-dasharray: 8 6;
-      animation: dashFlow 24s linear infinite;
-    }
-    @keyframes dashFlow {
-      to {
-        stroke-dashoffset: -200;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body class="min-h-screen flex flex-col">
+  <div id="network-notice" role="status" hidden></div>
+  <div id="startup-error" role="alert" hidden>필수 프로그램을 불러오지 못했습니다. 연결을 확인하고 새로고침해 주세요.</div>
+  <noscript>이 시연 사이트는 JavaScript가 필요합니다. 브라우저에서 JavaScript를 허용해 주세요.</noscript>
 
   <!-- 1. 상단 시연 데이터 및 안전 원칙 고지 배너 (TRD 0절 & 1.4절 준수) -->
   <header class="bg-amber-950 text-amber-50 border-b-2 border-amber-500">
@@ -174,7 +145,7 @@
           <div>
             <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">마산 시범 구간 접근성 길찾기</h2>
             <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
-              이동기기별 제원 및 현장 조사 기준(단차 2cm 초과, 계단, 경사 1/12 이상, 유효폭 1.2m 미만)을 반영해 경로를 판정합니다.
+              미리 분류한 시연 구간의 상태와 이동기기별 가상 속도를 이용합니다. 실제 통행 가능성은 판정하지 않습니다.
             </p>
           </div>
           <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
@@ -295,7 +266,7 @@
           <!-- 자동차 API 연동/미연동 시연 스위치 (TRD 1.3 B.2 검증용) -->
           <label class="inline-flex items-center gap-2 text-xs font-bold bg-slate-100 px-3 py-2 rounded-xl border border-slate-300 cursor-pointer">
             <input type="checkbox" id="toggle-car-api" checked class="w-4 h-4 accent-blue-600" />
-            <span>자동차 Directions 시연 연동</span>
+            <span>자동차 시간 샘플 표시 (실제 API 미연동)</span>
           </label>
         </div>
 
@@ -404,7 +375,7 @@
               <input
                 type="number"
                 id="input-full-range"
-                min="1"
+                min="0.1"
                 max="100"
                 step="0.5"
                 value="25"
@@ -428,7 +399,7 @@
         </div>
 
         <!-- 배터리 계산 결과 및 경로 도달 판정 -->
-        <div id="battery-result-box" class="rounded-2xl border-2 p-4 sm:p-5 space-y-3">
+        <div id="battery-result-box" aria-live="polite" class="rounded-2xl border-2 p-4 sm:p-5 space-y-3">
           <!-- 동적 렌더링 -->
         </div>
 
@@ -443,7 +414,7 @@
           <div>
             <h3 class="text-lg font-extrabold text-slate-900">마산 생활권 전동휠체어 급속충전소 목록</h3>
             <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
-              출처: 공공데이터포털 전국전동휠체어급속충전기표준데이터 (기준일: 2026-10-15 시연 샘플)
+              공공데이터 형식을 참고한 시연 샘플입니다. 거리와 운영 정보는 실제 위치나 실시간 상태를 반영하지 않습니다.
             </p>
           </div>
           <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-300">
@@ -481,7 +452,7 @@
           </div>
 
           <p class="text-xs sm:text-sm text-slate-600">
-            위치 확인 버튼을 누르면 브라우저 위치 권한(GPS)을 요청합니다. 권한이 거부되거나 실내에서 측정이 어려울 경우 아래에서 시범 위치를 수동으로 선택하세요.
+            버튼을 누른 뒤 브라우저 권한 요청에 동의하면 위치를 조회합니다. 위치는 이 화면에서만 사용하며 서버에 전송하지 않습니다. 수동 위치는 시연용이므로 실제 위치를 직접 확인하세요.
           </p>
 
           <button
@@ -495,9 +466,9 @@
 
           <!-- 위치 결과 표시 카드 -->
           <div id="location-status-box" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm space-y-1">
-            <div class="font-bold text-slate-800">현재 설정 위치: <span id="loc-name" class="text-emerald-700">마산대학교 정문 인근 (기본 시연 위치)</span></div>
-            <div class="text-xs text-slate-600">좌표: <span id="loc-coords">35.2492, 128.5048</span> | 정확도: <span id="loc-accuracy">수동 선택</span></div>
-            <div class="text-xs text-slate-500">확인 시각: <span id="loc-time">미측정 (수동 기본값)</span></div>
+            <div class="font-bold text-slate-800">현재 설정 위치: <span id="loc-name" class="text-emerald-700">미확인</span></div>
+            <div class="text-xs text-slate-600">좌표: <span id="loc-coords">미확인</span> | 정확도: <span id="loc-accuracy">미확인</span></div>
+            <div class="text-xs text-slate-500">확인 시각: <span id="loc-time">미측정</span></div>
           </div>
 
           <!-- 위치 거부·실패 대비 수동 위치 선택 -->
@@ -506,6 +477,7 @@
               위치 권한 거부·실패 시 마산 주요 지점 수동 선택:
             </label>
             <select id="select-manual-location" class="w-full p-2.5 rounded-xl border-2 border-slate-300 bg-white font-bold text-sm text-slate-800">
+              <option value="">선택하지 않음 (위치 미확인)</option>
               <option value="마산대학교 정문 (경남 창원시 마산회원구 내서읍 함마대로 2640)|35.2492, 128.5048">마산대학교 정문 인근</option>
               <option value="내서읍 행정복지센터 앞 (경남 창원시 마산회원구 내서읍 광려천서로 65)|35.2415, 128.5112">내서읍 행정복지센터 앞</option>
               <option value="마산시외버스터미널 횡단보도 앞 (경남 창원시 마산회원구 합성남로 11)|35.2368, 128.5824">마산시외버스터미널 앞</option>
@@ -529,9 +501,9 @@
               type="tel"
               id="input-guardian-phone"
               placeholder="예: 010-1234-5678"
-              value="010-0000-0000"
               class="w-full p-3 rounded-xl border-2 border-slate-300 font-bold text-slate-900 text-base"
             />
+            <p class="text-xs text-slate-600 mt-1">숫자와 하이픈으로 9~11자리 연락처를 입력하세요. 위치 미확인 시 문자에 그 사실이 표시됩니다.</p>
           </div>
 
           <!-- 자동 생성 문자 내용 미리보기 -->
@@ -556,7 +528,7 @@
           <div class="grid grid-cols-2 gap-2.5">
             <a
               id="link-call-guardian"
-              href="tel:01000000000"
+              aria-disabled="true"
               class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm text-center shadow-sm transition flex items-center justify-center gap-1.5"
             >
               <span>📞</span>
@@ -564,7 +536,7 @@
             </a>
             <a
               id="link-sms-guardian"
-              href="#"
+              aria-disabled="true"
               class="py-3 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm text-center shadow-sm transition flex items-center justify-center gap-1.5"
             >
               <span>💬</span>
@@ -620,1034 +592,19 @@
   <!-- JavaScript: TRD 순수 판정 로직, 시범 데이터, 상태 관리                   -->
   <!-- ===================================================================== -->
   <script>
-    /**
-     * 1. TRD 기반 마산 시범 구간 정적 시연 데이터 (demo-v1)
-     * - 실제 이동에 사용 불가한 해커톤 검증 시연용 데이터 구조
-     */
-    const DEMO_META = {
-      source: 'sample',
-      asOf: '2026-11-26T00:00:00Z',
-      dataVersion: 'demo-v1',
-      notice: '시연 데이터. 실제 이동에 사용하지 마세요.'
-    };
-
-    const DEVICES = {
-      power_wheelchair: { id: 'power_wheelchair', label: '전동휠체어', speedKmh: 4.0, icon: '🦽' },
-      scooter: { id: 'scooter', label: '전동스쿠터', speedKmh: 4.0, icon: '🛵' },
-      manual_wheelchair: { id: 'manual_wheelchair', label: '수동휠체어', speedKmh: 3.0, icon: '🧑‍🦽' },
-      stroller: { id: 'stroller', label: '유모차', speedKmh: 3.0, icon: '👶' }
-    };
-
-    const PLACES = {
-      masan_univ: { id: 'masan_univ', name: '마산대학교 정문', zone: 'A', lat: 35.2492, lng: 128.5048, x: 90, y: 150 },
-      naeseo_center: { id: 'naeseo_center', name: '내서읍 행정복지센터', zone: 'A', lat: 35.2415, lng: 128.5112, x: 510, y: 150 },
-      masan_terminal: { id: 'masan_terminal', name: '마산시외버스터미널', zone: 'B', lat: 35.2368, lng: 128.5824, x: 90, y: 150 },
-      hapseong_under: { id: 'hapseong_under', name: '합성동 지하상가 3번출구 인근', zone: 'B', lat: 35.2389, lng: 128.5841, x: 510, y: 150 },
-      happo_office: { id: 'happo_office', name: '마산합포구청', zone: 'OUT', lat: 35.1795, lng: 128.5665, x: 300, y: 260 }
-    };
-
-    /**
-     * 시범 경로 후보 및 구간 데이터
-     * 상태값(status):
-     * - passable: 양호 (초록/파랑)
-     * - caution: 주의 (주황 - 경사 1/12 이상, 유효폭 1.2m 미만, 단차 2cm 초과 등)
-     * - unknown: 정보 미확인 (회색 - 현장 조사 미완료 구간)
-     * - blocked: 진입 불가 (빨강 - 계단, 높은 단차 등으로 추천 경로에서 제외됨)
-     */
-    const DEMO_SCENARIOS = {
-      // 시범 구역 A: 마산대학교 정문 <-> 내서읍 행정복지센터
-      'masan_univ__naeseo_center': {
-        zoneTitle: '마산 시범 구역 A (내서읍 대학로 ~ 광려천서로 일대)',
-        observedAt: '2026-11-20',
-        // 지도에 별도 표시할 시범 구역 내 진입 불가(blocked) 장애물 구간
-        areaBlockedSegments: [
-          {
-            id: 'SEG-A-BLK-01',
-            title: '구도로 보행육교 및 계단 구간',
-            reason: '계단 14단 및 유효 보도폭 0.75m (전 기기 진입 불가)',
-            lengthM: 120,
-            points: '210,75 390,75',
-            badgeX: 300,
-            badgeY: 62
-          }
-        ],
-        candidates: [
-          {
-            id: 'ROUTE-A-1',
-            name: '광려천 평탄 산책로 우회길 (추천 쉬운 길)',
-            carDurationMin: 4,
-            segments: [
-              { id: 'S-A1-1', name: '마산대 정문 횡단보도~삼거리', lengthM: 320, status: 'passable', detail: '유효 보도폭 2.1m, 단차 0cm (양호)', points: '90,150 230,210' },
-              { id: 'S-A1-2', name: '광려천 데크 진입 경사로', lengthM: 280, status: 'caution', detail: '경사 약 7.5%(1/13) 완만 경사 주의', points: '230,210 380,210' },
-              { id: 'S-A1-3', name: '내서읍 행정복지센터 정면 진입로', lengthM: 350, status: 'passable', detail: '유효 보도폭 2.4m, 평탄 보도 (양호)', points: '380,210 510,150' }
-            ]
-          },
-          {
-            id: 'ROUTE-A-2',
-            name: '내서대로 직선 큰길 (최단 빠른 길)',
-            carDurationMin: 4,
-            segments: [
-              { id: 'S-A2-1', name: '마산대 앞 내리막 보도', lengthM: 290, status: 'caution', detail: '경사 8.8%(1/11.3) 기준 초과 주의', points: '90,150 250,145' },
-              { id: 'S-A2-2', name: '상가 밀집 구간 인도', lengthM: 260, status: 'unknown', detail: '적치물·보도폭 현장 재확인 필요 (미확인)', points: '250,145 390,145' },
-              { id: 'S-A2-3', name: '복지센터 북측 횡단보도', lengthM: 230, status: 'passable', detail: '음향신호기 및 낮춤석 확인 (양호)', points: '390,145 510,150' }
-            ]
-          },
-          {
-            id: 'ROUTE-A-3-BLOCKED',
-            name: '구도로 지름길 (진입 불가로 자동 제외됨)',
-            carDurationMin: 4,
-            segments: [
-              { id: 'S-A3-1', name: '구도로 진입로', lengthM: 200, status: 'passable', detail: '양호', points: '90,150 210,75' },
-              { id: 'S-A3-2', name: '구도로 보행육교 및 계단', lengthM: 120, status: 'blocked', detail: '계단 14단 존재 - 휠체어·유모차 진입 불가', points: '210,75 390,75' },
-              { id: 'S-A3-3', name: '복지센터 후문', lengthM: 220, status: 'passable', detail: '양호', points: '390,75 510,150' }
-            ]
-          }
-        ]
-      },
-
-      // 시범 구역 B: 마산시외버스터미널 <-> 합성동 지하상가 3번출구 인근
-      'masan_terminal__hapseong_under': {
-        zoneTitle: '마산 시범 구역 B (합성남로 ~ 합성옛길 상권 일대)',
-        observedAt: '2026-11-22',
-        areaBlockedSegments: [
-          {
-            id: 'SEG-B-BLK-01',
-            title: '합성동 지하상가 중앙 계단 출입구',
-            reason: '승강기 미설치 계단 구간 (진입 불가)',
-            lengthM: 85,
-            points: '240,80 380,80',
-            badgeX: 310,
-            badgeY: 66
-          }
-        ],
-        candidates: [
-          {
-            id: 'ROUTE-B-1',
-            name: '합성남로 지상 횡단보도 우회 경로',
-            carDurationMin: 3,
-            segments: [
-              { id: 'S-B1-1', name: '터미널 광장~대우백화점 방면 보도', lengthM: 210, status: 'passable', detail: '유효 보도폭 2.8m, 턱낮춤 완료 (양호)', points: '90,150 260,205' },
-              { id: 'S-B1-2', name: '합성사거리 지상 횡단보도', lengthM: 140, status: 'caution', detail: '배수로 덮개 단차 2.3cm 주의', points: '260,205 390,205' },
-              { id: 'S-B1-3', name: '3번출구 인근 엘리베이터 앞', lengthM: 170, status: 'passable', detail: '지상 엘리베이터 접근 양호', points: '390,205 510,150' }
-            ]
-          },
-          {
-            id: 'ROUTE-B-2-BLOCKED',
-            name: '지하보도 직통 연결통로 (계단으로 제외됨)',
-            carDurationMin: 3,
-            segments: [
-              { id: 'S-B2-1', name: '터미널 앞 보행로', lengthM: 150, status: 'passable', detail: '양호', points: '90,150 240,80' },
-              { id: 'S-B2-2', name: '합성동 지하상가 중앙 계단', lengthM: 85, status: 'blocked', detail: '계단 구간 - 휠체어·유모차 진입 불가', points: '240,80 380,80' },
-              { id: 'S-B2-3', name: '3번출구 측면 골목', lengthM: 130, status: 'caution', detail: '보도폭 1.0m 미만', points: '380,80 510,150' }
-            ]
-          }
-        ]
+    window.addEventListener('error', (event) => {
+      if (event.target.tagName === 'SCRIPT' && event.target.src.includes('/assets/')) {
+        document.getElementById('startup-error').hidden = false;
       }
-    };
-
-    // 역방향 경로 자동 매핑 (시연용 동일 구역 역방향 지원)
-    DEMO_SCENARIOS['naeseo_center__masan_univ'] = {
-      ...DEMO_SCENARIOS['masan_univ__naeseo_center'],
-      zoneTitle: '마산 시범 구역 A 역방향 (내서읍 행정복지센터 → 마산대학교 정문)'
-    };
-    DEMO_SCENARIOS['hapseong_under__masan_terminal'] = {
-      ...DEMO_SCENARIOS['masan_terminal__hapseong_under'],
-      zoneTitle: '마산 시범 구역 B 역방향 (합성동 지하상가 인근 → 마산시외버스터미널)'
-    };
-
-    // 시범 정류장 및 저상버스 샘플 데이터
-    const DEMO_BUS_DATA = {
-      stop_masan_univ: {
-        stopName: '마산대학 정류장 (3790101)',
-        asOf: '2026-11-26 14:10 (시연 샘플)',
-        arrivals: [
-          { routeNo: '113번', dest: '창원역 방면', minutes: 4, isLowFloor: true, statusText: '저상버스 운행' },
-          { routeNo: '250번', dest: '마산역·합성동 방면', minutes: 9, isLowFloor: true, statusText: '저상버스 운행' },
-          { routeNo: '111번', dest: '경남대 방면', minutes: 14, isLowFloor: false, statusText: '일반버스 (계단 있음)' }
-        ]
-      },
-      stop_naeseo: {
-        stopName: '내서읍행정복지센터 정류장 (3790204)',
-        asOf: '2026-11-26 14:10 (시연 샘플)',
-        arrivals: [
-          { routeNo: '250번', dest: '마산대학 방면', minutes: 3, isLowFloor: true, statusText: '저상버스 운행' },
-          { routeNo: '114번', dest: '마산시외버스터미널 방면', minutes: 11, isLowFloor: null, statusText: '차량유형 미확인' }
-        ]
-      },
-      stop_terminal: {
-        stopName: '마산시외버스터미널 정류장 (3790512)',
-        asOf: '2026-11-26 14:10 (시연 샘플)',
-        arrivals: [
-          { routeNo: '100번', dest: '창원시청 방면', minutes: 2, isLowFloor: true, statusText: '저상버스 운행' },
-          { routeNo: '710번', dest: '진해 방면', minutes: 6, isLowFloor: true, statusText: '저상버스 운행' },
-          { routeNo: '162번', dest: '어시장·합포구청 방면', minutes: 12, isLowFloor: false, statusText: '일반버스 (계단 있음)' }
-        ]
-      },
-      stop_unconnected: null // API 미연동 상태 검증용
-    };
-
-    // 마산 전동휠체어 급속충전기 샘플 데이터
-    const DEMO_CHARGERS = [
-      {
-        id: 'CHG-01',
-        name: '내서읍 행정복지센터 1층 민원실 로비',
-        address: '경남 창원시 마산회원구 내서읍 광려천서로 65',
-        distanceM: 120,
-        hours: '평일 09:00 ~ 18:00 (주말·공휴일 미운영)',
-        phone: '055-225-6421',
-        verifiedWaypoint: true,
-        sourceDate: '2026-10-15'
-      },
-      {
-        id: 'CHG-02',
-        name: '마산시외버스터미널 1층 대합실 안내데스크 옆',
-        address: '경남 창원시 마산회원구 합성남로 11',
-        distanceM: 180,
-        hours: '매일 06:00 ~ 22:00',
-        phone: '055-256-1621',
-        verifiedWaypoint: true,
-        sourceDate: '2026-10-15'
-      },
-      {
-        id: 'CHG-03',
-        name: '마산회원구청 종합민원실 입구',
-        address: '경남 창원시 마산회원구 3·15대로 558',
-        distanceM: 1450,
-        hours: '평일 09:00 ~ 18:00',
-        phone: '055-230-4211',
-        verifiedWaypoint: false,
-        sourceDate: '2026-10-15'
-      },
-      {
-        id: 'CHG-04',
-        name: '마산역 대합실 고객지원실 앞',
-        address: '경남 창원시 마산회원구 마산역광장로 18',
-        distanceM: 1820,
-        hours: '매일 05:30 ~ 23:30',
-        phone: '055-293-7788',
-        verifiedWaypoint: false,
-        sourceDate: '2026-10-15'
-      }
-    ];
-
-    /**
-     * 2. 전역 상태 관리
-     */
-    const state = {
-      activeTab: 'route',
-      largeText: false,
-      device: 'power_wheelchair',
-      origin: 'masan_univ',
-      destination: 'naeseo_center',
-      selectedRouteMode: 'easy', // 'easy' | 'fast'
-      simulateMapError: false,   // TRD 1.4 지도 SDK 로드 실패 시뮬레이션
-      includeCarApi: true,
-      currentRouteResult: null,
-      location: {
-        name: '마산대학교 정문 인근 (기본 시연 위치)',
-        coords: '35.2492, 128.5048',
-        accuracy: '수동 기본값',
-        time: '미측정'
-      }
-    };
-
-    /**
-     * 3. TRD 순수 판정 및 계산 함수
-     */
-    // 소요시간 계산: ceil(distanceM / (speedKmh * 1000 / 3600)) -> 분 단위 올림
-    function calcDurationMinutes(distanceM, speedKmh) {
-      const durationSec = Math.ceil(distanceM / ((speedKmh * 1000) / 3600));
-      return Math.max(1, Math.ceil(durationSec / 60));
-    }
-
-    // TRD 1.3 A.4~5 경로 후보 평가 및 쉬운 길 / 빠른 길 선정
-    function evaluateRoutes(originId, destId, deviceId) {
-      if (originId === destId) {
-        return {
-          status: 'INVALID_INPUT',
-          message: '출발지와 도착지가 같습니다. 서로 다른 장소를 선택해 주세요.'
-        };
-      }
-
-      const key = `${originId}__${destId}`;
-      const scenario = DEMO_SCENARIOS[key];
-
-      if (!scenario) {
-        return {
-          status: 'OUT_OF_SCOPE',
-          message: '선택하신 구간은 현재 마산 시범 조사 범위를 벗어났거나 검증된 경로가 없습니다. (시연 원칙에 따라 임의 직선 경로나 타 구역 샘플로 대체하지 않습니다.)'
-        };
-      }
-
-      const device = DEVICES[deviceId];
-      const validCandidates = [];
-      const excludedCandidates = [];
-
-      scenario.candidates.forEach((cand) => {
-        const hasBlocked = cand.segments.some((s) => s.status === 'blocked');
-        let distanceM = 0;
-        let cautionLengthM = 0;
-        let unknownLengthM = 0;
-
-        cand.segments.forEach((s) => {
-          distanceM += s.lengthM;
-          if (s.status === 'caution') cautionLengthM += s.lengthM;
-          if (s.status === 'unknown') unknownLengthM += s.lengthM;
-        });
-
-        const enriched = {
-          ...cand,
-          distanceM,
-          cautionLengthM,
-          unknownLengthM,
-          wheelchairMin: calcDurationMinutes(distanceM, device.speedKmh),
-          walkingMin: calcDurationMinutes(distanceM, 4.0)
-        };
-
-        if (hasBlocked) {
-          excludedCandidates.push(enriched);
-        } else {
-          validCandidates.push(enriched);
-        }
-      });
-
-      if (validCandidates.length === 0) {
-        return {
-          status: 'NO_VERIFIED_ROUTE',
-          message: '모든 후보 경로에 진입 불가(계단·단차 등) 구간이 포함되어 추천 가능한 경로가 없습니다.',
-          obstacles: scenario.areaBlockedSegments
-        };
-      }
-
-      // 쉬운 길(easy): 미확인 구간 길이 최소 -> 주의 구간 길이 최소 -> 총거리 최소 -> ID 순
-      const easySorted = [...validCandidates].sort((a, b) => {
-        if (a.unknownLengthM !== b.unknownLengthM) return a.unknownLengthM - b.unknownLengthM;
-        if (a.cautionLengthM !== b.cautionLengthM) return a.cautionLengthM - b.cautionLengthM;
-        if (a.distanceM !== b.distanceM) return a.distanceM - b.distanceM;
-        return a.id.localeCompare(b.id);
-      });
-
-      // 빠른 길(fast): 총 예상 시간(거리) 최소 -> ID 순
-      const fastSorted = [...validCandidates].sort((a, b) => {
-        if (a.wheelchairMin !== b.wheelchairMin) return a.wheelchairMin - b.wheelchairMin;
-        if (a.distanceM !== b.distanceM) return a.distanceM - b.distanceM;
-        return a.id.localeCompare(b.id);
-      });
-
-      const easy = easySorted[0];
-      const fast = fastSorted[0];
-      const sameRoute = easy.id === fast.id;
-
-      return {
-        status: 'OK',
-        zoneTitle: scenario.zoneTitle,
-        observedAt: scenario.observedAt,
-        areaBlockedSegments: scenario.areaBlockedSegments,
-        easy,
-        fast,
-        sameRoute,
-        excludedCandidates
-      };
-    }
-
-    // TRD 1.3 C.2 배터리 주행거리 공식
-    function calculateBatteryRange(pct, fullKm, envFactor) {
-      if (isNaN(pct) || pct < 0 || pct > 100 || isNaN(fullKm) || fullKm <= 0) {
-        return null;
-      }
-      const estimatedKm = fullKm * (pct / 100) * envFactor * 0.85;
-      return Math.round(estimatedKm * 100) / 100;
-    }
-
-    /**
-     * 4. UI 렌더링 함수
-     */
-    function showToast(message, type = 'info') {
-      const box = document.getElementById('toast-box');
-      const content = document.getElementById('toast-content');
-      const text = document.getElementById('toast-text');
-
-      box.classList.remove('hidden');
-      text.textContent = message;
-
-      content.className = 'p-3.5 rounded-xl border-2 font-bold text-sm flex items-center justify-between gap-3 shadow-sm ';
-      if (type === 'error') {
-        content.className += 'bg-rose-50 border-rose-300 text-rose-950';
-      } else if (type === 'success') {
-        content.className += 'bg-emerald-50 border-emerald-300 text-emerald-950';
-      } else {
-        content.className += 'bg-blue-50 border-blue-300 text-blue-950';
-      }
-    }
-
-    function getStatusStyle(status) {
-      switch (status) {
-        case 'passable':
-          return { label: '양호 (통행 가능)', color: '#16a34a', badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300', icon: '🟢' };
-        case 'caution':
-          return { label: '주의 구간', color: '#ea580c', badgeBg: 'bg-orange-100 text-orange-900 border-orange-300', icon: '🟠' };
-        case 'unknown':
-          return { label: '정보 미확인', color: '#64748b', badgeBg: 'bg-slate-200 text-slate-800 border-slate-400', icon: '⚪' };
-        case 'blocked':
-          return { label: '진입 불가 (제외)', color: '#dc2626', badgeBg: 'bg-rose-100 text-rose-900 border-rose-300', icon: '⛔' };
-        default:
-          return { label: '미확인', color: '#64748b', badgeBg: 'bg-slate-100 text-slate-700', icon: '⚪' };
-      }
-    }
-
-    // Tab 1: 경로 결과 렌더링
-    function renderRouteResult() {
-      const container = document.getElementById('route-result-container');
-      const res = evaluateRoutes(state.origin, state.destination, state.device);
-      state.currentRouteResult = res;
-
-      // 다른 탭(시간비교, 배터리)도 최신 경로 기준으로 동기화
-      renderTransportComparison();
-      renderBatterySection();
-
-      if (res.status !== 'OK') {
-        container.innerHTML = `
-          <div class="bg-white rounded-2xl border-2 border-rose-300 p-6 space-y-3 shadow-sm">
-            <div class="flex items-center gap-2.5 text-rose-700 font-black text-lg">
-              <span>🚫</span>
-              <span>경로 확인 불가 (${res.status})</span>
-            </div>
-            <p class="text-sm sm:text-base text-slate-800 font-medium leading-relaxed">
-              ${res.message}
-            </p>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
-              <strong>안전 원칙 안내 (TRD 0절):</strong> 턱없이는 정보가 없다는 이유만으로 안전하다고 판단하지 않으며, 확인된 대안 경로가 없으면 무리한 추천 대신 경로 확인 불가를 안내합니다. 상단의 <strong>'시범1'</strong> 또는 <strong>'시범2'</strong> 버튼을 눌러 검증된 구간을 시연해 보세요.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      const activeCandidate = state.selectedRouteMode === 'fast' ? res.fast : res.easy;
-      const originPlace = PLACES[state.origin];
-      const destPlace = PLACES[state.destination];
-      const device = DEVICES[state.device];
-
-      // SVG 지도 폴리라인 생성
-      const segmentLinesSvg = activeCandidate.segments.map((seg) => {
-        const st = getStatusStyle(seg.status);
-        // 선택 경로 기본 색상을 보여주되 주의/미확인 구간은 상태 색상을 우선 표시 (TRD 1.3 A.6)
-        const strokeColor = seg.status === 'passable'
-          ? (state.selectedRouteMode === 'fast' ? '#2563eb' : '#16a34a')
-          : st.color;
-        const dashAttr = seg.status === 'unknown' ? 'stroke-dasharray="6 6"' : '';
-        return `
-          <polyline
-            points="${seg.points}"
-            fill="none"
-            stroke="${strokeColor}"
-            stroke-width="9"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ${dashAttr}
-          />
-        `;
-      }).join('');
-
-      // 시범 구역 내 진입 불가(빨간색 + 금지 아이콘) 구간 SVG
-      const blockedSvg = res.areaBlockedSegments.map((blk) => `
-        <g>
-          <polyline
-            points="${blk.points}"
-            fill="none"
-            stroke="#dc2626"
-            stroke-width="8"
-            stroke-linecap="round"
-            stroke-dasharray="4 4"
-          />
-          <circle cx="${blk.badgeX}" cy="${blk.badgeY}" r="14" fill="#dc2626" stroke="#ffffff" stroke-width="2.5" />
-          <text x="${blk.badgeX}" y="${blk.badgeY + 5}" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">⛔</text>
-          <rect x="${blk.badgeX - 95}" y="${blk.badgeY - 38}" width="190" height="20" rx="6" fill="#7f1d1d" />
-          <text x="${blk.badgeX}" y="${blk.badgeY - 24}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">진입 불가: 계단·단차 회피</text>
-        </g>
-      `).join('');
-
-      container.innerHTML = `
-        <!-- 쉬운 길 vs 빠른 길 비교 선택 카드 -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span class="text-xs font-bold text-emerald-700">${res.zoneTitle}</span>
-              <h3 class="text-lg font-extrabold text-slate-900">
-                ${device.icon} ${device.label} 맞춤 추천 경로 비교
-              </h3>
-            </div>
-            <div class="text-xs text-slate-500 font-semibold">
-              현장 조사일: ${res.observedAt} | 출처: 시범조사 샘플
-            </div>
-          </div>
-
-          ${res.sameRoute ? `
-            <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs sm:text-sm font-bold">
-              ℹ️ 현재 선택하신 조건에서는 <strong>쉬운 길과 빠른 길이 동일한 경로</strong>입니다.
-            </div>
-          ` : ''}
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            <!-- 쉬운 길 카드 -->
-            <button
-              type="button"
-              onclick="selectRouteMode('easy')"
-              class="text-left p-4 rounded-2xl border-2 transition ${
-                state.selectedRouteMode === 'easy'
-                  ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-200'
-                  : 'border-slate-200 bg-white hover:bg-slate-50'
-              }"
-            >
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-extrabold">
-                  🟢 쉬운 길 (장벽 최소화)
-                </span>
-                ${state.selectedRouteMode === 'easy' ? '<span class="text-xs font-black text-emerald-700">선택됨 ✓</span>' : ''}
-              </div>
-              <div class="font-extrabold text-base text-slate-900 mt-1">${res.easy.name}</div>
-              <div class="flex items-baseline gap-3 mt-2">
-                <span class="text-2xl font-black text-emerald-700">약 ${res.easy.wheelchairMin}분</span>
-                <span class="text-sm font-bold text-slate-600">총 ${res.easy.distanceM}m</span>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
-                <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${res.easy.cautionLengthM}m</span>
-                <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${res.easy.unknownLengthM}m</span>
-              </div>
-            </button>
-
-            <!-- 빠른 길 카드 -->
-            <button
-              type="button"
-              onclick="selectRouteMode('fast')"
-              class="text-left p-4 rounded-2xl border-2 transition ${
-                state.selectedRouteMode === 'fast'
-                  ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-200'
-                  : 'border-slate-200 bg-white hover:bg-slate-50'
-              }"
-            >
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-extrabold">
-                  🔵 빠른 길 (최단 소요시간)
-                </span>
-                ${state.selectedRouteMode === 'fast' ? '<span class="text-xs font-black text-blue-700">선택됨 ✓</span>' : ''}
-              </div>
-              <div class="font-extrabold text-base text-slate-900 mt-1">${res.fast.name}</div>
-              <div class="flex items-baseline gap-3 mt-2">
-                <span class="text-2xl font-black text-blue-700">약 ${res.fast.wheelchairMin}분</span>
-                <span class="text-sm font-bold text-slate-600">총 ${res.fast.distanceM}m</span>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
-                <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-900">주의 구간 ${res.fast.cautionLengthM}m</span>
-                <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800">미확인 구간 ${res.fast.unknownLengthM}m</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- 시범 구역 접근성 지도 및 범례 + 지도 실패 대체 검증 토글 -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div>
-              <h3 class="text-lg font-extrabold text-slate-900">시범 구간 접근성 지도 및 장애물 표시</h3>
-              <p class="text-xs text-slate-600">색상뿐 아니라 아이콘·텍스트 범례를 함께 제공하여 시인성을 높였습니다.</p>
-            </div>
-            <!-- TRD 3.3 지도 SDK 실패 시 텍스트 대체 목록 검증 시나리오 토글 -->
-            <label class="inline-flex items-center gap-2 text-xs font-bold bg-slate-100 px-3 py-2 rounded-xl border border-slate-300 cursor-pointer">
-              <input type="checkbox" id="toggle-map-error" ${state.simulateMapError ? 'checked' : ''} onchange="toggleMapError(this.checked)" class="w-4 h-4 accent-rose-600" />
-              <span>지도 로드 실패 시연 (텍스트 대체)</span>
-            </label>
-          </div>
-
-          <!-- 접근성 상태 범례 -->
-          <div class="flex flex-wrap items-center gap-2 sm:gap-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold">
-            <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded-full bg-emerald-600 inline-block"></span> 쉬운 길(양호)</span>
-            <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded-full bg-blue-600 inline-block"></span> 빠른 길(양호)</span>
-            <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded-full bg-orange-600 inline-block"></span> 주의 구간(경사·폭)</span>
-            <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded-full bg-slate-500 inline-block"></span> 정보 미확인</span>
-            <span class="inline-flex items-center gap-1 text-rose-700">⛔ 진입 불가(계단·단차 제외)</span>
-          </div>
-
-          <!-- 지도 뷰 또는 지도 실패 대체 화면 -->
-          ${state.simulateMapError ? `
-            <div class="p-5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 space-y-2">
-              <div class="font-black text-base flex items-center gap-2">
-                <span>⚠️</span>
-                <span>지도 불러오기 실패 (SDK 오류 시연 모드)</span>
-              </div>
-              <p class="text-xs sm:text-sm">
-                외부 지도 SDK 응답 지연 또는 네트워크 오류로 지도를 표시할 수 없습니다. TRD 장애 대응 원칙에 따라 아래 <strong>조사된 구간별 텍스트 상세 목록</strong>으로 경로를 안내합니다.
-              </p>
-            </div>
-          ` : `
-            <div class="relative w-full overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100">
-              <svg viewBox="0 0 600 265" class="w-full h-auto block" role="img" aria-label="마산 시범 구역 접근성 경로 지도">
-                <!-- 배경 격자 및 도로망 모식도 -->
-                <rect width="600" height="265" fill="#f1f5f9" />
-                <path d="M0 150 H600 M90 0 V265 M510 0 V265 M230 150 L230 265 M380 150 L380 265" stroke="#e2e8f0" stroke-width="14" />
-                <path d="M0 235 Q300 225 600 240" fill="none" stroke="#bae6fd" stroke-width="16" />
-                <text x="300" y="240" text-anchor="middle" fill="#0369a1" font-size="10" font-weight="700">광려천 / 마산 생활권 하천 보행축</text>
-
-                <!-- 진입 불가(제외된 경로) 표시 -->
-                ${blockedSvg}
-
-                <!-- 선택된 추천 경로 구간 -->
-                ${segmentLinesSvg}
-
-                <!-- 출발지 마커 -->
-                <g transform="translate(${originPlace.x}, ${originPlace.y})">
-                  <circle r="15" fill="#0f172a" stroke="#ffffff" stroke-width="3" />
-                  <text y="4" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">출발</text>
-                  <rect x="-70" y="20" width="140" height="22" rx="6" fill="#0f172a" />
-                  <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${originPlace.name}</text>
-                </g>
-
-                <!-- 도착지 마커 -->
-                <g transform="translate(${destPlace.x}, ${destPlace.y})">
-                  <circle r="15" fill="#059669" stroke="#ffffff" stroke-width="3" />
-                  <text y="4" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900">도착</text>
-                  <rect x="-80" y="20" width="160" height="22" rx="6" fill="#065f46" />
-                  <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">${destPlace.name}</text>
-                </g>
-              </svg>
-            </div>
-          `}
-
-          <!-- 구간별 상세 텍스트 목록 (지도와 항상 함께 제공) -->
-          <div class="space-y-2.5 pt-2">
-            <h4 class="font-extrabold text-sm sm:text-base text-slate-900">
-              📋 선택 경로 구간별 상세 안내 (${activeCandidate.name})
-            </h4>
-            ${activeCandidate.segments.map((seg, idx) => {
-              const st = getStatusStyle(seg.status);
-              return `
-                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div class="space-y-1">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="font-black text-xs px-2 py-0.5 rounded bg-slate-800 text-white">구간 ${idx + 1}</span>
-                      <span class="font-extrabold text-sm text-slate-900">${seg.name}</span>
-                      <span class="text-xs font-bold px-2 py-0.5 rounded border ${st.badgeBg}">
-                        ${st.icon} ${st.label}
-                      </span>
-                    </div>
-                    <p class="text-xs sm:text-sm text-slate-700 font-medium">${seg.detail}</p>
-                  </div>
-                  <div class="text-sm font-black text-slate-800 shrink-0">
-                    거리 ${seg.lengthM}m
-                  </div>
-                </div>
-              `;
-            }).join('')}
-
-            <!-- 자동 제외된 진입 불가 구간 사유 표시 -->
-            ${res.excludedCandidates.map((ex) => `
-              <div class="p-3.5 rounded-xl border-2 border-rose-200 bg-rose-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-black px-2 py-0.5 rounded bg-rose-600 text-white">⛔ 추천 제외 경로</span>
-                    <span class="font-extrabold text-sm text-rose-950">${ex.name}</span>
-                  </div>
-                  <p class="text-xs text-rose-800 font-semibold">
-                    제외 사유: ${ex.segments.filter((s) => s.status === 'blocked').map((s) => s.detail).join(', ')}
-                  </p>
-                </div>
-                <span class="text-xs font-bold text-rose-700 shrink-0">자동 우회 처리됨</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    // Tab 2: 이동시간 비교 & 저상버스 렌더링
-    function renderTransportComparison() {
-      const container = document.getElementById('transport-comparison-cards');
-      const res = state.currentRouteResult;
-      const device = DEVICES[state.device];
-
-      if (!res || res.status !== 'OK') {
-        container.innerHTML = `
-          <div class="col-span-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 font-bold">
-            먼저 '1. 맞춤 길찾기' 탭에서 유효한 마산 시범 구간 경로를 선택해 주세요.
-          </div>
-        `;
-        return;
-      }
-
-      const route = state.selectedRouteMode === 'fast' ? res.fast : res.easy;
-      const carHtml = state.includeCarApi
-        ? `
-          <div class="text-2xl font-black text-slate-900 mt-1">약 ${route.carDurationMin}분</div>
-          <div class="text-xs text-slate-500 font-semibold mt-1">도로 기준 약 ${(route.distanceM * 1.15 / 1000).toFixed(1)}km</div>
-          <div class="mt-2 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded">
-            출처: NAVER Directions 5 시연 샘플
-          </div>
-        `
-        : `
-          <div class="text-lg font-black text-slate-500 mt-2">자동차 시간 미제공</div>
-          <div class="text-xs text-slate-500 mt-1">외부 Directions API 미연동 상태</div>
-        `;
-
-      container.innerHTML = `
-        <div class="p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40">
-          <div class="text-xs font-extrabold text-emerald-800">${device.icon} 선택 기기 (${device.label})</div>
-          <div class="text-2xl font-black text-emerald-700 mt-1">약 ${route.wheelchairMin}분</div>
-          <div class="text-xs text-slate-600 font-semibold mt-1">경로 거리 ${route.distanceM}m · 시연속도 ${device.speedKmh}km/h</div>
-          <div class="mt-2 text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-1 rounded">
-            출처: 마산 시범조사 경로 (${res.observedAt})
-          </div>
-        </div>
-
-        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-          <div class="text-xs font-extrabold text-slate-700">🚶 일반 도보 비교</div>
-          <div class="text-2xl font-black text-slate-900 mt-1">약 ${route.walkingMin}분</div>
-          <div class="text-xs text-slate-600 font-semibold mt-1">경로 거리 ${route.distanceM}m · 시연속도 4.0km/h</div>
-          <div class="mt-2 text-[11px] font-bold text-slate-600 bg-slate-200/70 px-2 py-1 rounded">
-            출처: 시연 속도 추정치 (ORS 참고)
-          </div>
-        </div>
-
-        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-          <div class="text-xs font-extrabold text-slate-700">🚗 자동차 이동 비교</div>
-          ${carHtml}
-        </div>
-      `;
-    }
-
-    function renderBusArrivals() {
-      const stopId = document.getElementById('select-bus-stop').value;
-      const listEl = document.getElementById('bus-arrival-list');
-      const stopData = DEMO_BUS_DATA[stopId];
-
-      if (!stopData) {
-        listEl.innerHTML = `
-          <div class="p-4 rounded-xl bg-slate-100 border border-slate-300 text-sm font-bold text-slate-700">
-            ℹ️ 해당 정류장은 현재 TAGO 실시간 버스 API 미연동(NOT_CONNECTED) 상태로 도착 정보가 없습니다.
-          </div>
-        `;
-        return;
-      }
-
-      listEl.innerHTML = `
-        <div class="text-xs text-slate-500 font-bold mb-2">
-          정류장: ${stopData.stopName} | 데이터 기준: ${stopData.asOf}
-        </div>
-        ${stopData.arrivals.map((bus) => {
-          let badgeClass = 'bg-slate-200 text-slate-800';
-          let icon = '❓';
-          if (bus.isLowFloor === true) {
-            badgeClass = 'bg-emerald-100 text-emerald-900 border border-emerald-300';
-            icon = '♿';
-          } else if (bus.isLowFloor === false) {
-            badgeClass = 'bg-rose-100 text-rose-900 border border-rose-300';
-            icon = '⚠️';
-          }
-          return `
-            <div class="p-3.5 rounded-xl border border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-3">
-                <span class="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-black text-sm">${bus.routeNo}</span>
-                <div>
-                  <div class="font-extrabold text-sm text-slate-900">${bus.dest}</div>
-                  <span class="inline-block mt-1 text-xs font-bold px-2 py-0.5 rounded ${badgeClass}">
-                    ${icon} ${bus.statusText}
-                  </span>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-lg font-black text-blue-700">약 ${bus.minutes}분 후 도착</div>
-                <div class="text-[11px] text-slate-400">시연 샘플 데이터</div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      `;
-    }
-
-    // Tab 3: 배터리 계산 및 충전소 목록 렌더링
-    function renderBatterySection() {
-      const pct = parseFloat(document.getElementById('input-battery-pct').value);
-      const fullKm = parseFloat(document.getElementById('input-full-range').value);
-      const envFactor = parseFloat(document.getElementById('select-env-factor').value);
-      const resultBox = document.getElementById('battery-result-box');
-
-      const estKm = calculateBatteryRange(pct, fullKm, envFactor);
-      if (estKm === null) {
-        resultBox.className = 'rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 text-rose-900 font-bold text-sm';
-        resultBox.innerHTML = '⚠️ 배터리 잔량(0~100%)과 완충 주행거리(0km 초과)를 올바르게 입력해 주세요.';
-        return;
-      }
-
-      const res = state.currentRouteResult;
-      let routeCompareHtml = '<p class="text-xs text-slate-600">유효한 경로가 선택되면 편도·왕복 도달 가능 여부를 자동 판정합니다.</p>';
-
-      if (res && res.status === 'OK') {
-        const route = state.selectedRouteMode === 'fast' ? res.fast : res.easy;
-        const oneWayKm = route.distanceM / 1000;
-        const roundTripKm = oneWayKm * 2;
-
-        let oneWayBadge = '';
-        if (estKm > oneWayKm * 1.2) {
-          oneWayBadge = `<span class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-extrabold">✅ 계산상 편도 가능 (여유 양호)</span>`;
-        } else if (estKm >= oneWayKm) {
-          oneWayBadge = `<span class="px-2.5 py-1 rounded-lg bg-amber-500 text-amber-950 text-xs font-extrabold">⚠️ 계산상 편도 가능 (여유 부족 경고)</span>`;
-        } else {
-          oneWayBadge = `<span class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-extrabold">⛔ 편도 도달 불가 (충전 필요)</span>`;
-        }
-
-        const roundBadge = estKm >= roundTripKm
-          ? `<span class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-extrabold">🔄 계산상 왕복 가능 (${roundTripKm.toFixed(2)}km)</span>`
-          : `<span class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-800 text-xs font-extrabold">왕복 여유 부족 (${roundTripKm.toFixed(2)}km 필요)</span>`;
-
-        routeCompareHtml = `
-          <div class="pt-2 border-t border-slate-200/80 space-y-2">
-            <div class="text-xs sm:text-sm font-bold text-slate-800">
-              선택 경로 편도 거리: <strong>${oneWayKm.toFixed(2)}km (${route.distanceM}m)</strong>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              ${oneWayBadge}
-              ${roundBadge}
-            </div>
-          </div>
-        `;
-      }
-
-      resultBox.className = 'rounded-2xl border-2 border-emerald-300 bg-emerald-50/60 p-4 sm:p-5 space-y-3';
-      resultBox.innerHTML = `
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <span class="text-xs font-extrabold text-emerald-800">시연 공식 적용 예상 주행거리</span>
-            <div class="text-3xl font-black text-emerald-700 mt-0.5">약 ${estKm.toFixed(2)} km</div>
-          </div>
-          <div class="text-xs font-semibold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-            계산식: ${fullKm}km × (${pct}/100) × ${envFactor} × 0.85
-          </div>
-        </div>
-        ${routeCompareHtml}
-      `;
-    }
-
-    function renderChargers() {
-      const listEl = document.getElementById('charger-list');
-      listEl.innerHTML = DEMO_CHARGERS.map((chg) => `
-        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3">
-          <div class="space-y-1.5">
-            <div class="flex items-start justify-between gap-2">
-              <h4 class="font-extrabold text-sm sm:text-base text-slate-900">${chg.name}</h4>
-              <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-100 text-blue-900 shrink-0">
-                약 ${chg.distanceM}m
-              </span>
-            </div>
-            <p class="text-xs text-slate-600">${chg.address}</p>
-            <p class="text-xs font-semibold text-slate-700">🕒 운영시간: ${chg.hours}</p>
-            <div>
-              ${chg.verifiedWaypoint
-                ? '<span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">✓ 시범 구역 검증된 경유 지점</span>'
-                : '<span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">검증된 경유 경로 없음 (직접 확인 필요)</span>'}
-            </div>
-          </div>
-          <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-            <span class="text-slate-500">기준일: ${chg.sourceDate}</span>
-            <a href="tel:${chg.phone.replace(/-/g, '')}" class="font-extrabold text-emerald-700 hover:underline">
-              📞 ${chg.phone} 전화 확인
-            </a>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // Tab 4: 도움 요청 문자 및 링크 동기화
-    function updateHelpSmsPreview() {
-      const phone = document.getElementById('input-guardian-phone').value.trim();
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const smsText = `[턱없이 긴급도움요청] 전동이동기기 배터리 부족/이동 어려움으로 도움이 필요합니다.\n현재 위치: ${state.location.name}\n좌표: ${state.location.coords}`;
-
-      document.getElementById('sms-preview').value = smsText;
-      document.getElementById('link-call-guardian').href = cleanPhone ? `tel:${cleanPhone}` : 'tel:';
-      document.getElementById('link-sms-guardian').href = `sms:${cleanPhone}?body=${encodeURIComponent(smsText)}`;
-    }
-
-    /**
-     * 5. 이벤트 바인딩 및 초기화
-     */
-    function selectRouteMode(mode) {
-      state.selectedRouteMode = mode;
-      renderRouteResult();
-    }
-
-    function toggleMapError(checked) {
-      state.simulateMapError = checked;
-      renderRouteResult();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      // 큰 글씨 토글
-      const btnLargeText = document.getElementById('btn-large-text');
-      btnLargeText.addEventListener('click', () => {
-        state.largeText = !state.largeText;
-        document.documentElement.classList.toggle('large-text', state.largeText);
-        btnLargeText.setAttribute('aria-pressed', String(state.largeText));
-        document.getElementById('large-text-label').textContent = state.largeText ? '기본 글씨로' : '큰 글씨 켜기';
-        showToast(state.largeText ? '큰 글씨 모드가 활성화되었습니다.' : '기본 글씨 크기로 전환되었습니다.', 'info');
-      });
-
-      // 토스트 닫기
-      document.getElementById('toast-close').addEventListener('click', () => {
-        document.getElementById('toast-box').classList.add('hidden');
-      });
-
-      // 탭 전환
-      document.querySelectorAll('.tab-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const target = btn.dataset.tab;
-          state.activeTab = target;
-
-          document.querySelectorAll('.tab-btn').forEach((b) => {
-            const isActive = b.dataset.tab === target;
-            b.setAttribute('aria-selected', String(isActive));
-            b.className = isActive
-              ? 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-emerald-600 text-white shadow-sm transition'
-              : 'tab-btn flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm sm:text-base bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
-          });
-
-          ['route', 'transport', 'battery', 'help'].forEach((panelId) => {
-            document.getElementById(`panel-${panelId}`).classList.toggle('hidden', panelId !== target);
-          });
-        });
-      });
-
-      // 이동기기 선택
-      document.querySelectorAll('.device-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          state.device = btn.dataset.device;
-          document.querySelectorAll('.device-btn').forEach((b) => {
-            const selected = b.dataset.device === state.device;
-            b.className = selected
-              ? 'device-btn p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 text-left transition'
-              : 'device-btn p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-left transition';
-          });
-          renderRouteResult();
-        });
-      });
-
-      // 출발지·도착지 바꾸기
-      document.getElementById('btn-swap-places').addEventListener('click', () => {
-        const originEl = document.getElementById('select-origin');
-        const destEl = document.getElementById('select-destination');
-        const temp = originEl.value;
-        originEl.value = destEl.value;
-        destEl.value = temp;
-        state.origin = originEl.value;
-        state.destination = destEl.value;
-        renderRouteResult();
-      });
-
-      // 시연 프리셋 버튼
-      document.querySelectorAll('.preset-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          document.getElementById('select-origin').value = btn.dataset.o;
-          document.getElementById('select-destination').value = btn.dataset.d;
-          state.origin = btn.dataset.o;
-          state.destination = btn.dataset.d;
-          state.selectedRouteMode = 'easy';
-          renderRouteResult();
-          showToast('선택한 시범 시나리오 경로가 적용되었습니다.', 'success');
-        });
-      });
-
-      // 길찾기 실행 버튼
-      document.getElementById('btn-find-route').addEventListener('click', () => {
-        state.origin = document.getElementById('select-origin').value;
-        state.destination = document.getElementById('select-destination').value;
-        state.selectedRouteMode = 'easy';
-        renderRouteResult();
-        showToast('선택된 이동기기 기준으로 시범 구간 경로를 탐색했습니다.', 'success');
-      });
-
-      // Tab 2 이벤트
-      document.getElementById('toggle-car-api').addEventListener('change', (e) => {
-        state.includeCarApi = e.target.checked;
-        renderTransportComparison();
-      });
-      document.getElementById('select-bus-stop').addEventListener('change', renderBusArrivals);
-
-      // Tab 3 배터리 이벤트
-      const inputPct = document.getElementById('input-battery-pct');
-      const rangePct = document.getElementById('range-battery-pct');
-      inputPct.addEventListener('input', () => {
-        rangePct.value = inputPct.value;
-        renderBatterySection();
-      });
-      rangePct.addEventListener('input', () => {
-        inputPct.value = rangePct.value;
-        renderBatterySection();
-      });
-      document.getElementById('input-full-range').addEventListener('input', renderBatterySection);
-      document.getElementById('select-env-factor').addEventListener('change', renderBatterySection);
-
-      // Tab 4 위치 확인 및 도움 요청 이벤트
-      document.getElementById('btn-get-location').addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          showToast('이 브라우저에서는 위치 확인 기능을 지원하지 않습니다. 아래에서 수동으로 선택해 주세요.', 'error');
-          return;
-        }
-        showToast('브라우저 위치 권한을 요청하고 있습니다...', 'info');
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude.toFixed(5);
-            const lng = pos.coords.longitude.toFixed(5);
-            const acc = Math.round(pos.coords.accuracy);
-            const now = new Date().toLocaleTimeString('ko-KR');
-
-            state.location = {
-              name: `GPS 측정 좌표 (창원시 마산 생활권 확인 필요)`,
-              coords: `${lat}, ${lng}`,
-              accuracy: `약 ±${acc}m`,
-              time: now
-            };
-            document.getElementById('loc-name').textContent = state.location.name;
-            document.getElementById('loc-coords').textContent = state.location.coords;
-            document.getElementById('loc-accuracy').textContent = state.location.accuracy;
-            document.getElementById('loc-time').textContent = state.location.time;
-            updateHelpSmsPreview();
-            showToast('현재 GPS 좌표가 확인되었습니다.', 'success');
-          },
-          () => {
-            showToast('위치 권한이 거부되었거나 측정에 실패했습니다. 아래 수동 위치 선택을 이용해 주세요.', 'error');
-          },
-          { timeout: 5000 }
-        );
-      });
-
-      document.getElementById('select-manual-location').addEventListener('change', (e) => {
-        const [name, coords] = e.target.value.split('|');
-        state.location = {
-          name,
-          coords,
-          accuracy: '수동 지점 선택',
-          time: new Date().toLocaleTimeString('ko-KR')
-        };
-        document.getElementById('loc-name').textContent = state.location.name;
-        document.getElementById('loc-coords').textContent = state.location.coords;
-        document.getElementById('loc-accuracy').textContent = state.location.accuracy;
-        document.getElementById('loc-time').textContent = state.location.time;
-        updateHelpSmsPreview();
-      });
-
-      document.getElementById('input-guardian-phone').addEventListener('input', updateHelpSmsPreview);
-
-      document.getElementById('btn-copy-sms').addEventListener('click', () => {
-        const textarea = document.getElementById('sms-preview');
-        textarea.select();
-        document.execCommand('copy');
-        showToast('도움 요청 문자 내용이 클립보드에 복사되었습니다.', 'success');
-      });
-
-      // 초기 렌더링 실행
-      renderRouteResult();
-      renderBusArrivals();
-      renderChargers();
-      updateHelpSmsPreview();
-    });
+    }, true);
   </script>
+  <script defer src="assets/data.js"></script>
+  <script defer src="assets/state.js"></script>
+  <script defer src="assets/logic.js"></script>
+  <script defer src="assets/route-ui.js"></script>
+  <script defer src="assets/transport-ui.js"></script>
+  <script defer src="assets/battery-ui.js"></script>
+  <script defer src="assets/help-ui.js"></script>
+  <script defer src="assets/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,71 @@
+body {
+  font-family: 'Noto Sans KR', 'Inter', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  word-break: keep-all;
+}
+.hidden, [hidden] {
+  display: none !important;
+}
+#network-notice {
+  padding: 1rem;
+  background: #fef3c7;
+  color: #78350f;
+  font-weight: bold;
+}
+a[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+html[data-style-unavailable="true"] body {
+  margin: 0;
+  line-height: 1.5;
+}
+html[data-style-unavailable="true"] main,
+html[data-style-unavailable="true"] header,
+html[data-style-unavailable="true"] nav,
+html[data-style-unavailable="true"] footer {
+  padding: 1rem;
+}
+html[data-style-unavailable="true"] button,
+html[data-style-unavailable="true"] input,
+html[data-style-unavailable="true"] select,
+html[data-style-unavailable="true"] textarea {
+  font: inherit;
+  max-width: 100%;
+}
+html[data-style-unavailable="true"] svg.w-7 {
+  width: 28px;
+}
+html[data-style-unavailable="true"] svg.w-4 {
+  width: 16px;
+}
+html[data-style-unavailable="true"] svg[viewBox="0 0 600 265"] {
+  width: 100%;
+  height: auto;
+}
+/* 큰 글씨 모드 스타일 */
+html.large-text {
+  font-size: 19px;
+}
+html.large-text .text-xs {
+  font-size: 0.85rem;
+}
+html.large-text .text-sm {
+  font-size: 1rem;
+}
+/* 접근성 포커스 링 강화 */
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+/* SVG 지도 애니메이션 */
+.route-dash {
+  stroke-dasharray: 8 6;
+  animation: dashFlow 24s linear infinite;
+}
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -200;
+  }
+}
